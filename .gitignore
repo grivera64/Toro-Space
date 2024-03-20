@@ -1,0 +1,42 @@
+### IDE Workspace Files ###
+/**/*/.vscode/
+/**/*/.idea/
+*.sublime*
+
+# Go Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go Build
+*.test
+*.out
+*.exe
+
+# Go Mod
+/backend/pkg/
+/backend/bin/
+/backend/vendor/
+go.work
+
+# Node.js
+/frontend/node_modules/
+/frontend/build/
+/frontend/dist/
+
+# SQLite
+*.sqlite3*
+*.db*
+
+# Env files
+*.env*
+!.env.example
+
+# Logs
+*.log*
+/**/*/logs/
+
+# Ignore OS generated files
+.DS_*
