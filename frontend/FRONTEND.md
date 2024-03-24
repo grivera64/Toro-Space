@@ -80,3 +80,9 @@ npx tailwindcss -i ./src/index.css -o ./src/tailwind.css --watch
 ```html
 <link href="./tailwind.css" rel="stylesheet">
 ```
+
+### Add React-Router-Dom for routing
+
+```sh
+npm i react-router-dom
+```

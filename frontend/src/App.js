@@ -1,12 +1,24 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
+import NavigationBar from './components/common/NavigationBar';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+import HomePosts from './pages/HomePosts';
+import HomeDiscussions from './pages/HomeDiscussions';
 
 function App() {
   return (
-    <div className="app">
-      <h1 className="text-3xl font-bold underline">
-        Hello world!
-      </h1>
-    </div>
+    <BrowserRouter>
+      <div className="app">
+        <NavigationBar />
+        <Routes>
+          <Route path='/' element={<Navigate to="/posts" />} />
+          <Route path='/posts' element={<HomePosts />} />
+          <Route path='/discussions' element={<HomeDiscussions />} />
+          <Route path='*' element={<h1>Not Found</h1>} />
+        </Routes>
+      </div>
+    </BrowserRouter>
   );
 }
 
