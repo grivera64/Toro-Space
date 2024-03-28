@@ -16,7 +16,7 @@
 *.exe
 
 # Go Mod
-/backend/pkg/
+/backend/go/
 /backend/bin/
 /backend/vendor/
 go.work
