@@ -13,17 +13,24 @@ export function Discussion({username, avatar, content, date, topics}) {
     const [downvoteSelected, setDownvoteSelected] = React.useState(false);
     const [likes, setLikes] = React.useState(0);
 
+    if (date !== undefined && date !== null && date !== '') {
+        date = new Date(date).toLocaleString();
+    } else {
+        date = 'Unknown Date';
+    }
+
     return (
         <div className='discussion container rounded-md border-2 border-gray-300 w-1/2'>
             <div className='discussion-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t'>
-            <p>@{username ?? 'placeholder'}</p>
-            <ul className='flex flex-row gap-2 text-blue-500'>
-                {
-                    topics?.map((topic, index) => (
-                        <li key={index}>topic/{topic}</li>
-                    ))
-                }
-            </ul>
+                <p>@{username ?? 'placeholder'}</p>
+                <ul className='flex flex-row gap-2 text-blue-500'>
+                    {
+                        topics?.map((topic, index) => (
+                            <li key={index}>topic/{topic}</li>
+                        ))
+                    }
+                </ul>
+                <p>{date}</p>
             </div>
             {/* <hr /> */}
             <div className='discussion-content p-3 text-lg'>
