@@ -11,11 +11,9 @@ const tabs = [
 ];
 
 export default function Home() {
-    const [activeTabIndex, setActiveTabIndex] = React.useState(0);
     const navigate = useNavigate();
 
     const handleSelect = (index) => {
-        setActiveTabIndex(index);
         navigate(index === 0 ? '/posts' : '/discussions');
     };
 

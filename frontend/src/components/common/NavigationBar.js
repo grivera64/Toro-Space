@@ -2,9 +2,18 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const navItems = [
-    "Home",
-    "Topics",
-    "Organizations",
+    {
+        name: "Home",
+        path: "/",
+    },
+    {
+        name: "Topics",
+        path: "/topics",
+    },
+    {
+        name: "Organizations",
+        path: "/organizations"
+    },
 ];
 
 export default function NavigationBar() {
@@ -18,7 +27,7 @@ export default function NavigationBar() {
                             key={index}
                             className='hover:underline hover:cursor-pointer text-white text-lg font-bold transition duration-300 ease-in-out'
                         >
-                            <Link to='/'>{item}</Link>
+                            <Link to={item.path}>{item.name}</Link>
                         </li>
                     )
                 }

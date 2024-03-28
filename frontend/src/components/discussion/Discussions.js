@@ -8,7 +8,7 @@ export default function Discussions(props) {
     );
 }
 
-export function Discussion({username, avatar, content, date}) {
+export function Discussion({username, avatar, content, date, topics}) {
     const [upvoteSelected, setUpvoteSelected] = React.useState(false);
     const [downvoteSelected, setDownvoteSelected] = React.useState(false);
     const [likes, setLikes] = React.useState(0);
@@ -16,8 +16,14 @@ export function Discussion({username, avatar, content, date}) {
     return (
         <div className='discussion container rounded-md border-2 border-gray-300 w-1/2'>
             <div className='discussion-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t'>
-                <img src={avatar} alt='avatar' />
-                <p>{username ?? '@placeholder'}</p>
+            <p>@{username ?? 'placeholder'}</p>
+            <ul className='flex flex-row gap-2 text-blue-500'>
+                {
+                    topics?.map((topic, index) => (
+                        <li key={index}>topic/{topic}</li>
+                    ))
+                }
+            </ul>
             </div>
             {/* <hr /> */}
             <div className='discussion-content p-3 text-lg'>
@@ -62,6 +68,7 @@ export function Discussion({username, avatar, content, date}) {
                     {/* <img width={30} height={30} src='/images/downvote.svg'/> */}
                         <p>👎</p>
                     </button>
+                    <p>💬</p>
                 </div>
             </div>
         </div>

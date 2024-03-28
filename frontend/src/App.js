@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import HomePosts from './pages/HomePosts';
 import HomeDiscussions from './pages/HomeDiscussions';
+import Topics from './pages/Topics';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path='/' element={<Navigate to="/posts" />} />
           <Route path='/posts' element={<HomePosts />} />
           <Route path='/discussions' element={<HomeDiscussions />} />
+          <Route path='/topics' element={<Topics />} />
           <Route path='*' element={<h1>Not Found</h1>} />
         </Routes>
       </div>
