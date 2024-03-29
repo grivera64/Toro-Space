@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/healthcheck"
-	"torospace.csudh.edu/api/src/router"
+	"torospace.csudh.edu/api/router"
 )
 
 func main() {
