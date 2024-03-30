@@ -14,4 +14,5 @@ func SetupRoutes(app *fiber.App) {
 	// Endpoint: /auth/google
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
+	app.Get("/logout", handler.LogoutHandler)
 }

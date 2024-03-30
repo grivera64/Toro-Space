@@ -105,7 +105,25 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 	}
 
 	// TODO: Set to redirect to frontend, temporary redirect to /user
-	return c.Redirect("/user")
+	return c.Redirect("http://localhost:3000")
+}
+
+func LogoutHandler(c *fiber.Ctx) error {
+	// Get the current session
+	session, err := sessionStore.Get(c)
+	if err != nil {
+		log.Printf("Failed to get session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	// Destroy the session
+	if err := session.Destroy(); err != nil {
+		log.Printf("Failed to destroy session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	// Redirect to the login page (or wherever you want to send the user after they log out)
+	return c.Redirect("http://localhost:3000")
 }
 
 func GetUserHandler(c *fiber.Ctx) error {
