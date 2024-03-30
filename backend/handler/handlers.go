@@ -42,6 +42,7 @@ func init() {
 	sessionStore = session.New(session.Config{
 		Expiration:     30 * time.Minute,
 		CookieHTTPOnly: true,
+		// CookieSecure:  true, // HTTPS only
 	})
 }
 
@@ -94,6 +95,10 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 	session.Set("userID", user.ID)
+	if err := session.Regenerate(); err != nil {
+		log.Printf("Failed to regenerate session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
 	if err := session.Save(); err != nil {
 		log.Printf("Failed to save session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -123,5 +128,9 @@ func GetUserHandler(c *fiber.Ctx) error {
 	}
 
 	session.SetExpiry(30 * time.Minute)
+	if err := session.Save(); err != nil {
+		log.Printf("Failed to save session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
 	return c.JSON(user)
 }
