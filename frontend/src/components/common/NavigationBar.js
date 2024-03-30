@@ -1,5 +1,7 @@
-import React from 'react';
+import React, {useContext} from 'react';
 import { Link } from 'react-router-dom';
+
+import { UserContext } from '../../contexts/userContext';
 
 const navItems = [
     {
@@ -17,6 +19,7 @@ const navItems = [
 ];
 
 export default function NavigationBar() {
+    const {user, loggedIn} = useContext(UserContext);
     return (
         <nav className='navigation-bar bg-[#860038] flex justify-between pr-20 pl-20 py-2'>
             <h1 className='text-3xl font-bold text-white'>Toro Space</h1>
@@ -31,11 +34,28 @@ export default function NavigationBar() {
                         </li>
                     )
                 }
-                <button
+                {
+                    (!loggedIn) &&
+                    <button
                     className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
-                >
-                    Sign In
-                </button>
+                    onClick={() => {
+                        window.location.href = 'http://localhost:3030/auth/google';
+                    }}
+                    >
+                        Sign In
+                    </button>
+                }
+                {
+                    (loggedIn) &&
+                    <button
+                    className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
+                    onClick={() => {
+                        window.location.href = 'http://localhost:3030/logout';
+                    }}
+                    >
+                        Sign Out
+                    </button>
+                }
             </ul>
         </nav>
     );
