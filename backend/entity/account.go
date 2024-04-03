@@ -1,7 +1,7 @@
 package entity
 
 type Account struct {
-	ID        uint   `json:"id" gorm:"primaryKey"`
+	ID        uint   `json:"id" gorm:"primaryKey;autoIncrement"`
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	Email     string `json:"email"`

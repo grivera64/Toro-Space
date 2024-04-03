@@ -8,6 +8,12 @@ import (
 	"torospace.csudh.edu/api/entity"
 )
 
+type PostParams struct {
+	Before   string `json:"before"`
+	After    string `json:"after"`
+	PageSize int    `json:"page_size"`
+}
+
 type DB struct {
 	gormDB *gorm.DB
 	sync.Mutex
@@ -56,4 +62,83 @@ func (db *DB) GetAccountByGoogleID(id string) (*entity.Account, error) {
 	user := &entity.Account{}
 	err := db.gormDB.First(user, "google_id = ?", id).Error
 	return user, err
+}
+
+func (db *DB) GetUserByID(id uint) (*entity.User, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	user := &entity.User{}
+	err := db.gormDB.First(user, "id = ?", id).Error
+	return user, err
+}
+
+func (db *DB) AddPost(post *entity.Post) error {
+	db.Lock()
+	defer db.Unlock()
+
+	return db.gormDB.Create(post).Error
+}
+
+func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	// By default, provide latest 10 posts
+	if params == nil {
+		params = &PostParams{
+			PageSize: 10,
+		}
+	}
+
+	var posts []*entity.Post
+	query := db.gormDB.Preload("Author").
+		Order("created_at DESC")
+
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+
+	err := query.Limit(params.PageSize).
+		Find(&posts).
+		Error
+	return posts, err
+}
+
+func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	// By default, provide latest 10 posts
+	if params == nil {
+		params = &PostParams{
+			PageSize: 10,
+		}
+	}
+
+	var posts []*entity.Post
+	query := db.gormDB.Preload("Users").
+		Order("created_at DESC").
+		Where("author_id = ?", id)
+
+	if params.Before != "" {
+		query = query.Where("created_at < ?", params.Before)
+	}
+
+	if params.After != "" {
+		query = query.Where("created_at > ?", params.After)
+	}
+
+	if params.PageSize <= 0 {
+		params.PageSize = 10
+	}
+
+	err := query.Limit(params.PageSize).
+		Find(&posts).
+		Error
+	return posts, err
 }
