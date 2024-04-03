@@ -9,10 +9,12 @@ func SetupRoutes(app *fiber.App) {
 	// Endpoint: /
 	app.Get("/", handler.HelloHandler)
 
-	app.Get("/user", handler.GetUserHandler)
+	app.Get("/account/:id", handler.GetAccountHandler)
+	app.Get("/users/:id", handler.GetUserHandler)
 
 	// Endpoint: /auth/google
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
+
 	app.Get("/logout", handler.LogoutHandler)
 }

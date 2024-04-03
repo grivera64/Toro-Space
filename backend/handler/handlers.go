@@ -1,36 +1,31 @@
 package handler
 
 import (
+	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 	"torospace.csudh.edu/api/entity"
+	"torospace.csudh.edu/api/gateway/googleoauth"
 	"torospace.csudh.edu/api/mapper"
 	"torospace.csudh.edu/api/sqlite"
+	"torospace.csudh.edu/api/util"
 )
 
 var (
-	oauthConfig  *oauth2.Config
-	db           *sqlite.DB
-	sessionStore *session.Store
+	oauthConfig   *oauth2.Config
+	db            *sqlite.DB
+	sessionStore  *session.Store
+	googleGateway googleoauth.GoogleOauthGateway
 )
 
 func init() {
 	if err := godotenv.Load(); err != nil {
 		log.Fatalf("Unable to load .env: %s", err)
-	}
-	oauthConfig = &oauth2.Config{
-		ClientID:     os.Getenv("G_CLIENT_ID"),
-		ClientSecret: os.Getenv("G_CLIENT_SECRET"),
-		RedirectURL:  os.Getenv("G_REDIRECT"),
-		Endpoint:     google.Endpoint,
-		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
 	}
 
 	var err error
@@ -44,6 +39,8 @@ func init() {
 		CookieHTTPOnly: true,
 		// CookieSecure:  true, // HTTPS only
 	})
+
+	googleGateway = googleoauth.NewV2()
 }
 
 func HelloHandler(c *fiber.Ctx) error {
@@ -53,9 +50,21 @@ func HelloHandler(c *fiber.Ctx) error {
 }
 
 func GoogleAuthHandler(c *fiber.Ctx) error {
-	// TODO: Implement a secure Auth state challenge
-	googleUrl := oauthConfig.AuthCodeURL("not-implemented-yet")
-	return c.Redirect(googleUrl)
+	// Check if user is already authenticated
+	session, err := sessionStore.Get(c)
+	if err != nil {
+		log.Printf("Failed to get session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	_, ok := session.Get("accountID").(uint)
+	if ok {
+		// Redirect to the login page (or wherever you want to send the user after they log out)
+		return c.Redirect("http://localhost:3030/users/0")
+		// return c.Redirect("http://localhost:3000")
+	}
+
+	return c.Redirect(googleGateway.GetAuthUrl())
 }
 
 func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
@@ -63,26 +72,26 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 	code := c.Query("code")
 
 	// Exchange auth code for token
-	token, err := oauthConfig.Exchange(c.Context(), code)
+	token, err := googleGateway.GetToken(c.Context(), code)
 	if err != nil {
 		log.Printf("Failed to exchange auth code for token: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
 	// Map to a User
-	googleAuth, err := mapper.TokenToGoogleAuth(token.AccessToken)
+	googleUser, err := googleGateway.GetUserInfo(token.AccessToken)
 	if err != nil {
 		log.Printf("Failed to map token to GoogleAuth: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	var user *entity.User
-	user, err = db.GetUserByGoogleID(googleAuth.ID)
+	var account *entity.Account
+	account, err = db.GetAccountByGoogleID(googleUser.ID)
 
 	// User does not exist, create a new user
 	if err != nil {
-		user = mapper.GoogleAuthToUser(googleAuth)
-		if err := db.AddUser(user); err != nil {
+		account = mapper.GoogleUserToAccount(googleUser)
+		if err := db.AddAccount(account); err != nil {
 			log.Printf("Failed to add user to the database: %s", err)
 			return c.SendStatus(fiber.StatusInternalServerError)
 		}
@@ -94,7 +103,7 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 		log.Printf("Failed to get session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	session.Set("userID", user.ID)
+	session.Set("accountID", account.ID)
 	if err := session.Regenerate(); err != nil {
 		log.Printf("Failed to regenerate session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -104,8 +113,9 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	// TODO: Set to redirect to frontend, temporary redirect to /user
-	return c.Redirect("http://localhost:3000")
+	// Redirect to the login page (or wherever you want to send the user after they log out)
+	return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", account.ID))
+	// return c.Redirect("http://localhost:3000")
 }
 
 func LogoutHandler(c *fiber.Ctx) error {
@@ -123,23 +133,63 @@ func LogoutHandler(c *fiber.Ctx) error {
 	}
 
 	// Redirect to the login page (or wherever you want to send the user after they log out)
-	return c.Redirect("http://localhost:3000")
+	return c.Redirect("http://localhost:3030/users/0")
+	// return c.Redirect("http://localhost:3000")
 }
 
-func GetUserHandler(c *fiber.Ctx) error {
+func GetAccountHandler(c *fiber.Ctx) error {
 	session, err := sessionStore.Get(c)
 	if err != nil {
 		log.Printf("Failed to get session: %s", err)
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	userID, ok := session.Get("userID").(uint)
+	accountID, ok := session.Get("accountID").(uint)
 	if !ok {
 		log.Printf("Failed to get userID from session")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	user, err := db.GetUserByID(userID)
+	account, err := db.GetAccountByID(accountID)
+	if err != nil {
+		log.Printf("Failed to get user from database: %s", err)
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	session.SetExpiry(30 * time.Minute)
+	if err := session.Save(); err != nil {
+		log.Printf("Failed to save session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(account.Users)
+}
+
+func GetUserHandler(c *fiber.Ctx) error {
+	userID, err := c.ParamsInt("id")
+	if err != nil {
+		log.Printf("Failed to get userID from params: %s", err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	session, err := sessionStore.Get(c)
+	if err != nil {
+		log.Printf("Failed to get session: %s", err)
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	accountID, ok := session.Get("accountID").(uint)
+	if !ok {
+		log.Printf("Failed to get userID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	account, err := db.GetAccountByID(accountID)
+	if err != nil {
+		log.Printf("Failed to get user from database: %s", err)
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: uint(userID)})
 	if err != nil {
 		log.Printf("Failed to get user from database: %s", err)
 		return c.SendStatus(fiber.StatusUnauthorized)

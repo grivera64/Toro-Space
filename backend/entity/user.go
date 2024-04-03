@@ -1,11 +1,44 @@
 package entity
 
+import (
+	"torospace.csudh.edu/api/util"
+)
+
+type Role string
+
+var (
+	RoleOrganization Role = "organization"
+	RoleStudent      Role = "student"
+	RoleAdmin        Role = "admin"
+)
+
 type User struct {
 	ID          uint   `json:"id" gorm:"primaryKey"`
-	FirstName   string `json:"first_name"`
-	LastName    string `json:"last_name"`
 	DisplayName string `json:"display_name"`
 	AvatarUrl   string `json:"avatar_url"`
-	Email       string `json:"email"`
-	GoogleID    string `json:"google_id"`
+	Role        Role   `json:"role"`
+}
+
+func (u User) LessThan(other util.Comparable) bool {
+	otherUser, ok := other.(*User)
+	if !ok {
+		return false
+	}
+	return u.ID < otherUser.ID
+}
+
+func (u User) GreaterThan(other util.Comparable) bool {
+	otherUser, ok := other.(*User)
+	if !ok {
+		return false
+	}
+	return u.ID > otherUser.ID
+}
+
+func (u User) EqualTo(other util.Comparable) bool {
+	otherUser, ok := other.(*User)
+	if !ok {
+		return false
+	}
+	return u.ID == otherUser.ID
 }
