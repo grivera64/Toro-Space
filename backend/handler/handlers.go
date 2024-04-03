@@ -8,7 +8,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/session"
 	"github.com/joho/godotenv"
-	"golang.org/x/oauth2"
 	"torospace.csudh.edu/api/entity"
 	"torospace.csudh.edu/api/gateway/googleoauth"
 	"torospace.csudh.edu/api/mapper"
@@ -17,7 +16,6 @@ import (
 )
 
 var (
-	oauthConfig   *oauth2.Config
 	db            *sqlite.DB
 	sessionStore  *session.Store
 	googleGateway googleoauth.GoogleOauthGateway
