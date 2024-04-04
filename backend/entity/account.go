@@ -7,5 +7,5 @@ type Account struct {
 	Email     string `json:"email"`
 	GoogleID  string `json:"google_id"`
 
-	Users []User `json:"users" gorm:"foreignKey:ID"`
+	Users []User `json:"users" gorm:"many2many:account_users"`
 }

@@ -70,9 +70,9 @@ func (g *googleOauthGatewayV2) GetUserInfo(token string) (*GoogleUser, error) {
 		return nil, fmt.Errorf("unable to get user info")
 	}
 
-	googleAuth := &GoogleUser{}
-	if err := json.Unmarshal(body, googleAuth); err != nil {
+	googleUser := &GoogleUser{}
+	if err := json.Unmarshal(body, googleUser); err != nil {
 		return nil, fmt.Errorf("unable to parse user info")
 	}
-	return googleAuth, nil
+	return googleUser, nil
 }

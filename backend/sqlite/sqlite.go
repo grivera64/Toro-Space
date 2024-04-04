@@ -142,3 +142,19 @@ func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, err
 		Error
 	return posts, err
 }
+
+func (db *DB) CreateTopic(topic *entity.Topic) error {
+	db.Lock()
+	defer db.Unlock()
+
+	return db.gormDB.Create(topic).Error
+}
+
+func (db *DB) GetTopicByName(name string) (*entity.Topic, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	topic := &entity.Topic{}
+	err := db.gormDB.First(&topic, "name = ?", name).Error
+	return topic, err
+}

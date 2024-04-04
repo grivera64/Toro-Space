@@ -55,10 +55,10 @@ func GoogleAuthHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	_, ok := session.Get("accountID").(uint)
+	accountID, ok := session.Get("accountID").(uint)
 	if ok {
 		// Redirect to the login page (or wherever you want to send the user after they log out)
-		return c.Redirect("http://localhost:3030/users/0")
+		return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", accountID))
 		// return c.Redirect("http://localhost:3000")
 	}
 
@@ -164,6 +164,7 @@ func SelectUserHandler(c *fiber.Ctx) error {
 	}
 
 	sess.Set("userID", user.ID)
+	sess.Set("userRole", string(user.Role))
 	if err := sess.Save(); err != nil {
 		log.Printf("Failed to save session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -186,7 +187,7 @@ func LogoutHandler(c *fiber.Ctx) error {
 	}
 
 	// Redirect to the login page (or wherever you want to send the user after they log out)
-	return c.Redirect("http://localhost:3030/users/0")
+	return c.Redirect("http://localhost:3030/")
 	// return c.Redirect("http://localhost:3000")
 }
 
@@ -281,6 +282,7 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		log.Println("Failed to get session store in CreatePostHandler")
 		return c.SendStatus(fiber.StatusForbidden)
 	}
+
 	accountID, err := c.ParamsInt("accountID")
 	if err != nil {
 		return c.SendStatus(fiber.StatusBadRequest)
@@ -300,6 +302,11 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	sessUserID, ok := sess.Get("userID").(uint)
 	if !ok || uint(userID) != sessUserID {
 		log.Println("No userID in session for CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if role, ok := sess.Get("userRole").(entity.Role); !ok || (role != entity.RoleAdmin && role != entity.RoleOrganization) {
+		log.Println("User is not an admin or organization in CreatePostHandler")
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
@@ -327,10 +334,28 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
+	if user.Role != entity.RoleAdmin && user.Role != entity.RoleOrganization {
+		log.Println("User is not an admin or organization in CreatePostHandler (from DB)")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	reqTopics, ok := reqBody["topics"].([]string)
+	if !ok {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	topics := []entity.Topic{}
+	for _, topicName := range reqTopics {
+		if topic, err := db.GetTopicByName(topicName); err != nil {
+			topics = append(topics, *topic)
+		} else {
+			log.Printf("Failed to find %v in CreatePostHandler", topicName)
+		}
+	}
+
 	post := &entity.Post{
 		Content: reqBody["content"].(string),
-		Author:  &user,
-		// AuthorID: sessUserID,
+		Author:  user,
+		Topics:  topics,
 	}
 
 	if err := db.AddPost(post); err != nil {
