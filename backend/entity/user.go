@@ -1,6 +1,8 @@
 package entity
 
 import (
+	"encoding/gob"
+
 	"torospace.csudh.edu/api/util"
 )
 
@@ -19,8 +21,12 @@ type User struct {
 	Role        Role   `json:"role"`
 }
 
+func init() {
+	gob.Register(Role(""))
+}
+
 func (u User) LessThan(other util.Comparable) bool {
-	otherUser, ok := other.(*User)
+	otherUser, ok := other.(User)
 	if !ok {
 		return false
 	}
@@ -28,7 +34,7 @@ func (u User) LessThan(other util.Comparable) bool {
 }
 
 func (u User) GreaterThan(other util.Comparable) bool {
-	otherUser, ok := other.(*User)
+	otherUser, ok := other.(User)
 	if !ok {
 		return false
 	}
@@ -36,7 +42,7 @@ func (u User) GreaterThan(other util.Comparable) bool {
 }
 
 func (u User) EqualTo(other util.Comparable) bool {
-	otherUser, ok := other.(*User)
+	otherUser, ok := other.(User)
 	if !ok {
 		return false
 	}

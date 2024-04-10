@@ -2,12 +2,16 @@ package router
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"torospace.csudh.edu/api/handler"
 )
 
 func SetupRoutes(app *fiber.App) {
 	// Endpoint: /
 	app.Get("/", handler.HelloHandler)
+	app.Get("/monitor", monitor.New(monitor.Config{
+		Title: "Toro Space Monitor",
+	}))
 
 	app.Get("/account/:accountID", handler.GetAccountHandler)
 	app.Get("/account/:accountID/user/:userID", handler.GetUserHandler)
@@ -20,6 +24,9 @@ func SetupRoutes(app *fiber.App) {
 	// Endpoint: /auth/google
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
+
+	app.Post("/admin/new/user", handler.CreateUserHandler)
+	app.Get("/admin/account/:accountID", handler.GetAccountAdminHandler)
 
 	app.Get("/logout", handler.LogoutHandler)
 

@@ -164,7 +164,7 @@ func SelectUserHandler(c *fiber.Ctx) error {
 	}
 
 	sess.Set("userID", user.ID)
-	sess.Set("userRole", string(user.Role))
+	sess.Set("userRole", user.Role)
 	if err := sess.Save(); err != nil {
 		log.Printf("Failed to save session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -224,8 +224,8 @@ func GetAccountHandler(c *fiber.Ctx) error {
 }
 
 func GetUserHandler(c *fiber.Ctx) error {
-	userID, err := c.ParamsInt("userID")
-	if err != nil {
+	userID, err := c.ParamsInt("userID", -1)
+	if err != nil || userID < 1 {
 		log.Printf("Failed to get userID from params: %s", err)
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
@@ -296,6 +296,7 @@ func CreatePostHandler(c *fiber.Ctx) error {
 
 	userID, err := c.ParamsInt("userID")
 	if err != nil {
+		log.Println("Failed to get userID from params in CreatePostHandler")
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
@@ -339,12 +340,18 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	reqTopics, ok := reqBody["topics"].([]string)
+	reqTopics, ok := reqBody["topics"].([]interface{})
 	if !ok {
+		log.Printf("Failed to get topics from request body in CreatePostHandler: %v is %T", reqBody["topics"], reqBody["topics"])
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 	topics := []entity.Topic{}
 	for _, topicName := range reqTopics {
+		topicName, ok := topicName.(string)
+		if !ok {
+			log.Printf("Failed to get topic name from request body in CreatePostHandler: %v is %T", topicName, topicName)
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
 		if topic, err := db.GetTopicByName(topicName); err != nil {
 			topics = append(topics, *topic)
 		} else {
@@ -355,7 +362,10 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	post := &entity.Post{
 		Content: reqBody["content"].(string),
 		Author:  user,
-		Topics:  topics,
+	}
+
+	if len(topics) > 0 {
+		post.Topics = topics
 	}
 
 	if err := db.AddPost(post); err != nil {
@@ -363,4 +373,121 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(post)
+}
+
+func CreateUserHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session in CreateUserHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+	accountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in CreateUserHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+	userID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in CreateUserHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(accountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in CreateUserHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: userID})
+	if err != nil {
+		log.Println("Failed to get user by ID in CreateUserHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessRole, ok := sess.Get("userRole").(entity.Role)
+	if !ok || (user.Role != entity.RoleAdmin || sessRole != entity.RoleAdmin) {
+		log.Printf("User is not an admin in CreateUserHandler (user.Role = %s, sessRole = %s)", user.Role, sessRole)
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	reqBody := struct {
+		AccountID   uint        `json:"account_id"`
+		DisplayName string      `json:"display_name"`
+		AvatarUrl   string      `json:"avatar_url"`
+		Role        entity.Role `json:"role"`
+	}{}
+	if err := c.BodyParser(&reqBody); err != nil {
+		log.Printf("Failed to parse request body in CreateUserHandler: %s", err)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	newUserAccount, err := db.GetAccountByID(reqBody.AccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in CreateUserHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	newUser := &entity.User{
+		DisplayName: reqBody.DisplayName,
+		AvatarUrl:   reqBody.AvatarUrl,
+		Role:        reqBody.Role,
+	}
+	if err := db.AddAccountUser(newUserAccount, newUser); err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.Status(fiber.StatusCreated).
+		JSON(fiber.Map{
+			"message": "User created successfully",
+			"user":    newUser,
+		})
+}
+
+func GetAccountAdminHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session in GetAccountAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	getAccountID, err := c.ParamsInt("accountID", -1)
+	if err != nil || getAccountID < 1 {
+		log.Println("accountID was not parsable in params, or is negative")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	accountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in GetAccountAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+	userID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in GetAccountAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(accountID)
+	if err != nil {
+		log.Println("Failed to get current account by ID in GetAccountAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: userID})
+	if err != nil {
+		log.Println("Failed to get current user by ID in GetAccountAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessRole, ok := sess.Get("userRole").(entity.Role)
+	if !ok || (user.Role != entity.RoleAdmin || sessRole != entity.RoleAdmin) {
+		log.Printf("User is not an admin in GetAccountAdminHandler (user.Role = %s, sessRole = %s)", user.Role, sessRole)
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	getUserAccount, err := db.GetAccountByID(uint(getAccountID))
+	if err != nil {
+		log.Printf("Failed to get requested account by ID in GetAccountAdminHandler (accountID = %d)", getAccountID)
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.JSON(fiber.Map{
+		"account": getUserAccount,
+	})
 }
