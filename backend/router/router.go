@@ -18,8 +18,6 @@ func SetupRoutes(app *fiber.App) {
 	app.Put("/account/:accountID/user/:userID/select", handler.SelectUserHandler)
 	app.Post("/account/:accountID/user/:userID/post", handler.CreatePostHandler)
 
-	app.Get("/user/self", handler.GetCurrentUserHandler)
-
 	// Endpoint: /posts
 	app.Get("/posts", handler.GetPostsHandler)
 
