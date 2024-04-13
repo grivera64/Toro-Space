@@ -59,7 +59,7 @@ func GoogleAuthHandler(c *fiber.Ctx) error {
 	if ok {
 		// Redirect to the login page (or wherever you want to send the user after they log out)
 		return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", accountID))
-		// return c.Redirect("http://localhost:3000")
+		// return c.Redirect("http://localhost:3000/select")
 	}
 
 	return c.Redirect(googleGateway.GetAuthUrl())
@@ -124,7 +124,7 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 
 	// Redirect to the login page (or wherever you want to send the user after they log out)
 	return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", account.ID))
-	// return c.Redirect("http://localhost:3000")
+	// return c.Redirect("http://localhost:3000/select")
 }
 
 func SelectUserHandler(c *fiber.Ctx) error {
@@ -135,14 +135,20 @@ func SelectUserHandler(c *fiber.Ctx) error {
 	}
 	sess.SetExpiry(30 * time.Minute)
 
-	accountID, err := c.ParamsInt("accountID")
-	if err != nil {
-		return c.SendStatus(fiber.StatusBadRequest)
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Printf("Failed to get userID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
-	sessAccountID, ok := sess.Get("accountID").(uint)
-	if !ok || uint(accountID) != sessAccountID {
-		log.Printf("Failed to get userID from session")
+	accountID, err := c.ParamsInt("accountID")
+	if err != nil {
+		if c.Params("accountID") != "self" {
+			log.Println("Failed to get accountID from params")
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+	} else if uint(accountID) != sessAccountID {
+		log.Printf("Failed to get accountID from session")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
@@ -167,6 +173,38 @@ func SelectUserHandler(c *fiber.Ctx) error {
 	sess.Set("userRole", user.Role)
 	if err := sess.Save(); err != nil {
 		log.Printf("Failed to save session: %s", err)
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(user)
+}
+
+func GetCurrentUserHandler(c *fiber.Ctx) error {
+	session, err := sessionStore.Get(c)
+	if err != nil {
+		log.Printf("Failed to get session: %s", err)
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	sessAccountID, ok := session.Get("accountID").(uint)
+	if !ok {
+		log.Printf("Failed to get accountID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+	sessUserID, ok := session.Get("userID").(uint)
+	if !ok {
+		log.Printf("Failed to get userID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Printf("Failed to get user from database: %s", err)
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Printf("Failed to get user from database: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 	return c.JSON(user)
@@ -197,19 +235,25 @@ func GetAccountHandler(c *fiber.Ctx) error {
 		log.Printf("Failed to get session: %s", err)
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
-	session.SetExpiry(30 * time.Minute)
-
-	accountID, err := c.ParamsInt("accountID")
-	if err != nil {
-		return c.SendStatus(fiber.StatusBadRequest)
-	}
 
 	sessAccountID, ok := session.Get("accountID").(uint)
-	if !ok || uint(accountID) != sessAccountID {
+	if !ok {
 		log.Printf("Failed to get accountID from session")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
+	accountID, err := c.ParamsInt("accountID")
+	if err != nil {
+		if c.Params("accountID") != "self" {
+			log.Println("Failed to get accountID from params")
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+	} else if uint(accountID) != sessAccountID {
+		log.Printf("Failed to get accountID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	session.SetExpiry(30 * time.Minute)
 	if err := session.Save(); err != nil {
 		log.Printf("Failed to save session: %s", err)
 		return c.SendStatus(fiber.StatusInternalServerError)
@@ -237,9 +281,20 @@ func GetUserHandler(c *fiber.Ctx) error {
 	}
 	session.SetExpiry(30 * time.Minute)
 
-	accountID, ok := session.Get("accountID").(uint)
+	sessAccountID, ok := session.Get("accountID").(uint)
 	if !ok {
 		log.Printf("Failed to get userID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
+	}
+
+	accountID, err := c.ParamsInt("accountID")
+	if err != nil {
+		if c.Params("accountID") != "self" {
+			log.Println("Failed to get accountID from params")
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+	} else if uint(accountID) != sessAccountID {
+		log.Printf("Failed to get accountID from session")
 		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
@@ -248,7 +303,7 @@ func GetUserHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	account, err := db.GetAccountByID(accountID)
+	account, err := db.GetAccountByID(sessAccountID)
 	if err != nil {
 		log.Printf("Failed to get user from database: %s", err)
 		return c.SendStatus(fiber.StatusUnauthorized)
@@ -283,15 +338,21 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	accountID, err := c.ParamsInt("accountID")
-	if err != nil {
-		return c.SendStatus(fiber.StatusBadRequest)
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	sessAccountID, ok := sess.Get("accountID").(uint)
-	if !ok || uint(accountID) != sessAccountID {
-		log.Println("No accountID in session for CreatePostHandler")
-		return c.SendStatus(fiber.StatusForbidden)
+	accountID, err := c.ParamsInt("accountID")
+	if err != nil {
+		if c.Params("accountID") != "self" {
+			log.Println("Failed to get accountID from params")
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
+	} else if uint(accountID) != sessAccountID {
+		log.Printf("Failed to get accountID from session")
+		return c.SendStatus(fiber.StatusUnauthorized)
 	}
 
 	userID, err := c.ParamsInt("userID")
@@ -340,10 +401,14 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
-	reqTopics, ok := reqBody["topics"].([]interface{})
-	if !ok {
-		log.Printf("Failed to get topics from request body in CreatePostHandler: %v is %T", reqBody["topics"], reqBody["topics"])
-		return c.SendStatus(fiber.StatusBadRequest)
+	reqTopicsInterface, ok := reqBody["topics"]
+	var reqTopics []interface{}
+	if ok {
+		reqTopics, ok = reqTopicsInterface.([]interface{})
+		if !ok {
+			log.Printf("Failed to get topics from request body in CreatePostHandler: %v is %T", reqTopicsInterface, reqTopicsInterface)
+			return c.SendStatus(fiber.StatusBadRequest)
+		}
 	}
 	topics := []entity.Topic{}
 	for _, topicName := range reqTopics {
