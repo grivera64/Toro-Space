@@ -7,6 +7,7 @@ import { UserContext } from './contexts/userContext';
 
 import Home from './pages/Home';
 import Topics from './pages/Topics';
+import Select from './pages/Select';
 
 function App() {
 
@@ -16,7 +17,7 @@ function App() {
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:3030/user', {
+                const response = await fetch('http://localhost:3030/user/self', {
                     credentials: 'include'
                 });
                 if (response.status === 401) {
@@ -41,6 +42,7 @@ function App() {
                     <Routes>
                         <Route path='/' element={<Navigate to='/home' />} />
                         <Route path='/home' element={<Home />} />
+                        <Route path='/select' element={<Select />} />
                         <Route path='/topics' element={<Topics />} />
                         <Route path='*' element={<h1>Not Found</h1>} />
                     </Routes>
