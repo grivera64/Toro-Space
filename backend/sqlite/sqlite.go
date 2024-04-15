@@ -92,7 +92,7 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 	}
 
 	var posts []*entity.Post
-	query := db.gormDB.Preload("Author").
+	query := db.gormDB.Preload("LikedBy", "Author").
 		Order("created_at DESC")
 
 	if params.Before != "" {
@@ -109,6 +109,15 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 	return posts, err
 }
 
+func (db *DB) GetPost(postID uint) (*entity.Post, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.Preload("LikedBy").Preload("Author").First(post, "id = ?", postID).Error
+	return post, err
+}
+
 func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, error) {
 	db.Lock()
 	defer db.Unlock()
@@ -121,7 +130,7 @@ func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, err
 	}
 
 	var posts []*entity.Post
-	query := db.gormDB.Preload("Users").
+	query := db.gormDB.Preload("LikedBy").Preload("Author").
 		Order("created_at DESC").
 		Where("author_id = ?", id)
 
@@ -141,6 +150,41 @@ func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, err
 		Find(&posts).
 		Error
 	return posts, err
+}
+
+func (db *DB) AddLikeToPost(postID uint, user *entity.User) error {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.Preload("LikedBy").Preload("Author").First(post, "id = ?", postID).Error
+	if err != nil {
+		return err
+	}
+
+	if post.LikedBy == nil {
+		post.LikedBy = []*entity.User{}
+	}
+	post.Likes = len(post.LikedBy)
+
+	for _, u := range post.LikedBy {
+		if u.ID == user.ID {
+			return nil
+		}
+	}
+
+	post.LikedBy = append(post.LikedBy, user)
+	post.Likes++
+	return db.gormDB.Save(post).Error
+}
+
+func (db *DB) GetPostLikesByID(postID uint) ([]*entity.User, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	var post entity.Post
+	err := db.gormDB.Preload("LikedBy").Preload("Author").First(post).Error
+	return post.LikedBy, err
 }
 
 func (db *DB) CreateTopic(topic *entity.Topic) error {

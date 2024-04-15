@@ -331,6 +331,66 @@ func GetPostsHandler(c *fiber.Ctx) error {
 	return c.JSON(posts)
 }
 
+func GetPostHandler(c *fiber.Ctx) error {
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in GetPostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	post, err := db.GetPost(uint(postID))
+	if err != nil {
+		log.Println("Failed to get post by ID in GetPostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(post)
+}
+
+func LikePostHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in LikePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if err := db.AddLikeToPost(uint(postID), &user); err != nil {
+		log.Println("Failed to like post in LikePostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func CreatePostHandler(c *fiber.Ctx) error {
 	sess, err := sessionStore.Get(c)
 	if err != nil {
@@ -401,6 +461,12 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusForbidden)
 	}
 
+	postContent, ok := reqBody["content"].(string)
+	if !ok || len(postContent) < 1 {
+		log.Printf("Failed to get content from request body in CreatePostHandler: %v is %T", reqBody["content"], reqBody["content"])
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
 	reqTopicsInterface, ok := reqBody["topics"]
 	var reqTopics []interface{}
 	if ok {
@@ -425,7 +491,7 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	}
 
 	post := &entity.Post{
-		Content: reqBody["content"].(string),
+		Content: postContent,
 		Author:  user,
 	}
 
