@@ -220,7 +220,6 @@ func LogoutHandler(c *fiber.Ctx) error {
 	}
 
 	// Redirect to the login page (or wherever you want to send the user after they log out)
-	// return c.Redirect("http://localhost:3030/")
 	return c.Redirect("http://localhost:3000")
 }
 
