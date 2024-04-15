@@ -11,10 +11,14 @@ export default function PostsView() {
 
     React.useEffect(() => {
         async function fetchData() {
-            const response = await fetch('http://localhost:3030/posts/?pageSize=10');
-            const data = await response.json();
-            console.log(data);
-            setPosts(data);
+            try {
+                const response = await fetch('http://localhost:3030/posts/?pageSize=10');
+                const data = await response.json();
+                console.log(data);
+                setPosts(data);
+            } catch (error) {
+                console.error('Failed to fetch posts:', error);
+            }
         }
         
         fetchData();
