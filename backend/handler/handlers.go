@@ -325,6 +325,87 @@ func GetPostsHandler(c *fiber.Ctx) error {
 	return c.JSON(posts)
 }
 
+func GetPostHandler(c *fiber.Ctx) error {
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in GetPostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	post, err := db.GetPost(uint(postID))
+	if err != nil {
+		log.Println("Failed to get post by ID in GetPostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(post)
+}
+
+func LikePostHandler(c *fiber.Ctx) error {
+
+	like := c.Query("type", "like")
+
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in LikePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in LikePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if like == "like" {
+		log.Println("Liking...")
+		if err := db.AddLikeToPost(uint(postID), &user); err != nil {
+			log.Println("Failed to like post in LikePostHandler")
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	} else if like == "unlike" {
+		log.Println("unliking...")
+		if err := db.RemoveLikeFromPost(uint(postID), &user); err != nil {
+			log.Println("Failed to unlike post in LikePostHandler", err)
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	} else {
+		log.Println("Invalid type in LikePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	post, err := db.GetPost(uint(postID))
+	if err != nil {
+		log.Println("Failed to get post by ID in LikePostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.Status(fiber.StatusOK).JSON(post)
+}
+
 func CreatePostHandler(c *fiber.Ctx) error {
 	sess, err := sessionStore.Get(c)
 	if err != nil {

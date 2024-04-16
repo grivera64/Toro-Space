@@ -25,7 +25,11 @@ export default function Home() {
             <div className='flex justify-center my-4'>
                 {
                     user?.error ||
-                    <p className='text-center'>Logged in as {user['display_name']}</p>
+                    <div className='flex flex-col gap-5'>
+                        <p className='text-center'>Logged in as {user['display_name']}</p>
+                        <p className='text-center'><Link to='/select' className='cursor-pointer hover:underline'>Switch Accounts</Link></p>
+                    </div>
+                    
                 }
             </div>
             <Tabs tabs={tabs} onSelect={handleSelect} />

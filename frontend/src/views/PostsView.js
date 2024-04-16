@@ -6,7 +6,7 @@ import FilterSearch from '../components/common/FilterSearch';
 import { UserContext } from '../contexts/userContext';
 
 export default function PostsView() {
-    const [posts, setPosts] = React.useState([]);
+    const [posts, setPosts] = React.useState(null);
     const {user} = React.useContext(UserContext);
 
     React.useEffect(() => {
@@ -17,10 +17,10 @@ export default function PostsView() {
                 console.log(data);
                 setPosts(data);
             } catch (error) {
+                setPosts([]);
                 console.error('Failed to fetch posts:', error);
             }
         }
-        
         fetchData();
     }, []);
     const [newPostContent, setNewPostContent] = React.useState('');
@@ -47,6 +47,15 @@ export default function PostsView() {
         setNewPostContent('');
     };
 
+    if (posts == null || user == null) {
+        return (
+            <div className='p-10'>
+                <FilterSearch />
+                <p>Loading...</p>
+            </div>
+        )
+    }
+
     return (
         <div className='p-10'>
             <FilterSearch />
@@ -71,7 +80,20 @@ export default function PostsView() {
                 {/* <Post username={'IEEE_CC'} topics={["Computer_Science"]} date={Date.now()} content={<p>Come join our club: <a className='underline' href='https://torolink.csudh.edu/organization/ieee'>https://torolink.csudh.edu/organization/ieee</a></p>} />
                 <Post username={'Google_Toros'} topics={["Computer_Science", "Careers"]} content={<p>Wish we were a club? Make it a reality and become President of our club!</p>} />
                 <Post username={'Dr_Izaddoost_Club'} topics={["Careers"]} content={<p>Good luck on your presentations!</p>} /> */}
-                {posts && posts.map(post => <Post key={post.id} displayName={post.author['display_name']} avatar={post.author['avatar_url']} topics={post.topics} date={post['created_at']} content={post.content} />)}
+                {posts && posts.map(post => (
+                    <Post
+                        key={post.id}
+                        // postID={post.id}
+                        // displayName={post.author['display_name']}
+                        // avatar={post.author['avatar_url']}
+                        // topics={post.topics}
+                        // date={post['created_at']}
+                        // likes={post.likes}
+                        // content={post.content}
+                        // isLiked={post.liked_by.map(obj => obj.id).some(id => id === user.id)} // Check if current user ID is in the likedBy list
+                        postData={post}
+                    />
+                ))}
             </Posts>
         </div>
     );
