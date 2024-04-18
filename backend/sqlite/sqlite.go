@@ -1,6 +1,8 @@
 package sqlite
 
 import (
+	"fmt"
+	"log"
 	"sync"
 
 	"gorm.io/driver/sqlite"
@@ -92,7 +94,7 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 	}
 
 	var posts []*entity.Post
-	query := db.gormDB.Preload("LikedBy", "Author").
+	query := db.gormDB.Preload("LikedBy").Preload("Author").
 		Order("created_at DESC")
 
 	if params.Before != "" {
@@ -163,22 +165,66 @@ func (db *DB) AddLikeToPost(postID uint, user *entity.User) error {
 	}
 
 	if post.LikedBy == nil {
-		post.LikedBy = []*entity.User{}
+		post.LikedBy = []entity.User{}
 	}
 	post.Likes = len(post.LikedBy)
 
 	for _, u := range post.LikedBy {
 		if u.ID == user.ID {
+			log.Println("User already liked post")
 			return nil
 		}
 	}
 
-	post.LikedBy = append(post.LikedBy, user)
-	post.Likes++
-	return db.gormDB.Save(post).Error
+	post.LikedBy = append(post.LikedBy, *user)
+	post.Likes = len(post.LikedBy)
+	return db.gormDB.Preload("LikedBy").Preload("Author").Save(post).Error
 }
 
-func (db *DB) GetPostLikesByID(postID uint) ([]*entity.User, error) {
+func (db *DB) RemoveLikeFromPost(postID uint, user *entity.User) error {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.Preload("LikedBy").Preload("Author").First(post, "id = ?", postID).Error
+	if err != nil {
+		return err
+	}
+	if post.LikedBy == nil {
+		return nil
+	}
+	if post.Likes == 0 {
+		return nil
+	}
+
+	indexMatch := -1
+	for index, u := range post.LikedBy {
+		if u.ID == user.ID {
+			indexMatch = index
+			break
+		}
+	}
+
+	if indexMatch != -1 {
+		toRemove := post.LikedBy[indexMatch]
+		log.Println(post.LikedBy)
+		if err := db.gormDB.Model(post).Association("LikedBy").Delete(toRemove); err != nil {
+			log.Println("Error deleting like: ", err)
+			return err
+		}
+		post.Likes = len(post.LikedBy)
+		err := db.gormDB.Preload("LikedBy").Preload("Author").Save(post).Error
+		if err != nil {
+			return err
+		}
+		log.Println(post.LikedBy)
+		return nil
+	}
+
+	return fmt.Errorf("user %d has not liked post %d", user.ID, postID)
+}
+
+func (db *DB) GetPostLikesByID(postID uint) ([]entity.User, error) {
 	db.Lock()
 	defer db.Unlock()
 

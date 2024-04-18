@@ -11,10 +11,10 @@ type Post struct {
 	Content  string  `json:"content"`
 	Author   User    `json:"author" gorm:"foreignKey:AuthorID"`
 	AuthorID uint    `json:"author_id"`
-	Topics   []Topic `json:"topics" gorm:"many2many:post_topics;"`
+	Topics   []Topic `json:"topics" gorm:"many2many:post_topics"`
 
-	LikedBy []*User `json:"liked_by" gorm:"many2many:post_users"`
-	Likes   int     `json:"likes"`
+	LikedBy []User `json:"liked_by" gorm:"many2many:post_users;save_associations:true"`
+	Likes   int    `json:"likes"`
 
 	CreatedAt time.Time      `json:"created_at" gorm:"autoCreateTime"`
 	UpdatedAt time.Time      `json:"updated_at" gorm:"autoUpdateTime"`
