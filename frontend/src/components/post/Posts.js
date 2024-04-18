@@ -12,7 +12,7 @@ export default function Posts(props) {
 // export function Post({postID, displayName, avatar, content, date, topics, likes, isLiked}) {
 export function Post({postData: {id, author: {display_name, avatar_url, role}, content, created_at, topics, likes, liked_by}}) {
     const {user} = React.useContext(UserContext);
-    const [upvoteSelected, setUpvoteSelected] = React.useState(liked_by.map(u => u.id).some(id => id === user.id));
+    const [upvoteSelected, setUpvoteSelected] = React.useState(liked_by?.map(u => u.id).some(id => id === user.id));
     const [likesCount, setLikesCount] = React.useState(likes);
 
     if (created_at !== undefined && created_at !== null && created_at !== '') {
@@ -22,7 +22,7 @@ export function Post({postData: {id, author: {display_name, avatar_url, role}, c
     }
 
     React.useEffect(() => {
-        const isLikedByUser = liked_by.some(u => u.id === user.id);
+        const isLikedByUser = liked_by?.some(u => u.id === user.id);
         setUpvoteSelected(isLikedByUser);
     }, [liked_by, user.id]);
 
