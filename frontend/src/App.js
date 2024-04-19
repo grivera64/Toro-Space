@@ -5,6 +5,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import { UserContext } from './contexts/userContext';
 
+import PostPage from './pages/PostPage';
+
 import Home from './pages/Home';
 import Topics from './pages/Topics';
 import Select from './pages/Select';
@@ -35,20 +37,21 @@ function App() {
     }, []);
 
     return (
-        <BrowserRouter>
-            <div className="app">
-                <UserContext.Provider value={{ user, loggedIn }}>
-                    <NavigationBar />
-                    <Routes>
-                        <Route path='/' element={<Navigate to='/home' />} />
-                        <Route path='/home' element={<Home />} />
-                        <Route path='/select' element={<Select />} />
-                        <Route path='/topics' element={<Topics />} />
-                        <Route path='*' element={<h1>Not Found</h1>} />
-                    </Routes>
-                </UserContext.Provider>
-            </div>
-        </BrowserRouter>
+      <BrowserRouter>
+        <div className="app">
+          <UserContext.Provider value={{ user, loggedIn }}>
+            <NavigationBar />
+            <Routes>
+              <Route path='/' element={<Navigate to='/home' />} />
+              <Route path='/home' element={<Home />} />
+              <Route path='/posts/:postId' element={<PostPage />} />
+              <Route path='/select' element={<Select />} />
+              <Route path='/topics' element={<Topics />} />
+              <Route path='*' element={<h1>Not Found</h1>} />
+            </Routes>
+          </UserContext.Provider>
+        </div>
+      </BrowserRouter>
     );
 }
 

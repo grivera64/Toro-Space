@@ -1,4 +1,6 @@
 import React from "react";
+import { Navigate } from "react-router-dom";
+
 import { UserContext } from "../../contexts/userContext";
 
 export default function Posts(props) {
@@ -10,10 +12,12 @@ export default function Posts(props) {
 }
 
 // export function Post({postID, displayName, avatar, content, date, topics, likes, isLiked}) {
-export function Post({postData: {id, author: {display_name, avatar_url, role}, content, created_at, topics, likes, liked_by}}) {
+export function Post({postData: {id, author: {display_name, avatar_url, role}, content, created_at, topics, likes, liked_by}}, showLink) {
+    if (showLink === undefined) showLink = true;
     const {user} = React.useContext(UserContext);
     const [upvoteSelected, setUpvoteSelected] = React.useState(liked_by?.map(u => u.id).some(id => id === user.id));
     const [likesCount, setLikesCount] = React.useState(likes);
+    const [disabled, setDisabled] = React.useState(false);
 
     if (created_at !== undefined && created_at !== null && created_at !== '') {
         created_at = new Date(created_at).toLocaleString();
@@ -26,20 +30,42 @@ export function Post({postData: {id, author: {display_name, avatar_url, role}, c
         setUpvoteSelected(isLikedByUser);
     }, [liked_by, user.id]);
 
+    const handlePostClick = () => {
+        window.location.href = `/posts/${id}`;
+    };
+
     return (
         <div className='post container rounded-md border-2 border-gray-300 w-1/2'>
-            <div className='post-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t'>
-                <img src={avatar_url} alt='avatar' />
-                <p>@{display_name ?? 'placeholder'}</p>
-                <ul className='flex flex-row gap-2 text-blue-500'>
-                    {
-                        topics?.map((topic, index) => (
-                            <li key={index}>topic/{topic}</li>
-                        ))
-                    }
-                </ul>
-                <p>{created_at}</p>
-            </div>
+            {
+                showLink && 
+                <div className='post-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t hover:cursor-pointer' onClick={showLink ? handlePostClick : undefined}>
+                    <img src={avatar_url} alt='avatar' />
+                    <p>@{display_name ?? 'placeholder'}</p>
+                    <ul className='flex flex-row gap-2 text-blue-500'>
+                        {
+                            topics?.map((topic, index) => (
+                                <li key={index}>topic/{topic}</li>
+                            ))
+                        }
+                    </ul>
+                    <p>{created_at}</p>
+                </div>
+            }
+            {
+                !showLink &&
+                <div className='post-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t'>
+                    <img src={avatar_url} alt='avatar' />
+                    <p>@{display_name ?? 'placeholder'}</p>
+                    <ul className='flex flex-row gap-2 text-blue-500'>
+                        {
+                            topics?.map((topic, index) => (
+                                <li key={index}>topic/{topic}</li>
+                            ))
+                        }
+                    </ul>
+                    <p>{created_at}</p>
+                </div>
+            }
             {/* <hr /> */}
             <div className='post-content p-3 text-lg'>
                 <p>{content ?? 'This is a placeholder post.'}</p>
@@ -48,20 +74,31 @@ export function Post({postData: {id, author: {display_name, avatar_url, role}, c
                 <div className='vote-footer-left flex flex-row gap-3'>
                     <button className={`vote-footer-left-like ${upvoteSelected ? 'bg-blue-200' : ''}`}
                         onClick={() => {
+                            if (disabled) return;
                             if (upvoteSelected) {
                                 fetch(`http://localhost:3030/posts/${id}/like/?type=unlike`, {
                                     method: 'POST', credentials: 'include'
                                 }).then(response => response.json())
-                                    .then(data => setLikesCount(data.likes))
-                                    .catch(error => console.log(error));
-                                setUpvoteSelected(false);
+                                    .then(data => {
+                                        setLikesCount(data.likes);
+                                        setUpvoteSelected(false);
+                                    })
+                                    .catch(error => {
+                                        console.log(error)
+                                        setDisabled(true);
+                                    });
                             } else {
                                 fetch(`http://localhost:3030/posts/${id}/like/?type=like`, {
                                     method: 'POST', credentials: 'include'
                                 }).then(response => response.json())
-                                    .then(data => setLikesCount(data.likes))
-                                    .catch(error => console.log(error));
-                                setUpvoteSelected(true);
+                                    .then(data => {
+                                        setLikesCount(data.likes)
+                                        setUpvoteSelected(true);
+                                    })
+                                    .catch(error => {
+                                        console.log(error)
+                                        setDisabled(true);
+                                    });
                             }
                         }}
                     >

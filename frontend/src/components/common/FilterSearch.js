@@ -1,7 +1,7 @@
 import React from "react";
 
 const selectOptions = [
-    'By Date',
+    'All',
     'By Votes',
     'By Posted At',
     'Users',

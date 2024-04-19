@@ -92,6 +92,7 @@ export default function PostsView() {
                         // content={post.content}
                         // isLiked={post.liked_by.map(obj => obj.id).some(id => id === user.id)} // Check if current user ID is in the likedBy list
                         postData={post}
+                        showLink={true}
                     />
                 ))}
             </Posts>
