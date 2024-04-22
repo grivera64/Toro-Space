@@ -26,6 +26,9 @@ export default function PostsView() {
     const [newPostContent, setNewPostContent] = React.useState('');
 
     const handlePostClick = async () => {
+        if (newPostContent == null || newPostContent.length === 0) {
+            return;
+        }
         const response = await fetch(`http://localhost:3030/account/self/user/${user.id}/post`, {
             method: 'POST',
             credentials: 'include',
