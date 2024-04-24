@@ -25,12 +25,17 @@ func SetupRoutes(app *fiber.App) {
 	app.Get("/posts/:postID", handler.GetPostHandler)
 	app.Post("/posts/:postID/like", handler.LikePostHandler)
 
+	// Endpoint: /topics
+	app.Get("/topics", handler.GetTopicsHandler)
+
 	// Endpoint: /auth/google
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
 
+	app.Get("/admin", handler.IsAdminHandler)
 	app.Post("/admin/new/user", handler.CreateUserHandler)
 	app.Get("/admin/account/:accountID", handler.GetAccountAdminHandler)
+	app.Post("/admin/new/topic/:topicName", handler.CreateTopicHandler)
 
 	app.Get("/logout", handler.LogoutHandler)
 

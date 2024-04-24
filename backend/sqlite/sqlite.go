@@ -30,6 +30,7 @@ func NewDB() (*DB, error) {
 	db.AutoMigrate(&entity.Account{})
 	db.AutoMigrate(&entity.User{})
 	db.AutoMigrate(&entity.Post{})
+	db.AutoMigrate(&entity.Topic{})
 	return &DB{gormDB: db}, nil
 }
 
@@ -52,9 +53,9 @@ func (db *DB) GetAccountByID(id uint) (*entity.Account, error) {
 	db.Lock()
 	defer db.Unlock()
 
-	user := &entity.Account{}
-	err := db.gormDB.Preload("Users").First(user, "id = ?", id).Error
-	return user, err
+	account := &entity.Account{}
+	err := db.gormDB.Preload("Users").First(account, "id = ?", id).Error
+	return account, err
 }
 
 func (db *DB) GetAccountByGoogleID(id string) (*entity.Account, error) {
@@ -79,7 +80,7 @@ func (db *DB) AddPost(post *entity.Post) error {
 	db.Lock()
 	defer db.Unlock()
 
-	return db.gormDB.Create(post).Error
+	return db.gormDB.Preload("Topics").Create(post).Error
 }
 
 func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
@@ -94,7 +95,7 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 	}
 
 	var posts []*entity.Post
-	query := db.gormDB.Preload("LikedBy").Preload("Author").
+	query := db.gormDB.Preload("LikedBy").Preload("Author").Preload("Topics").
 		Order("created_at DESC")
 
 	if params.Before != "" {
@@ -240,11 +241,20 @@ func (db *DB) CreateTopic(topic *entity.Topic) error {
 	return db.gormDB.Create(topic).Error
 }
 
+func (db *DB) GetTopics() ([]*entity.Topic, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	var topics []*entity.Topic
+	err := db.gormDB.Find(&topics).Error
+	return topics, err
+}
+
 func (db *DB) GetTopicByName(name string) (*entity.Topic, error) {
 	db.Lock()
 	defer db.Unlock()
 
 	topic := &entity.Topic{}
-	err := db.gormDB.First(&topic, "name = ?", name).Error
+	err := db.gormDB.First(topic, "name = ?", name).Error
 	return topic, err
 }

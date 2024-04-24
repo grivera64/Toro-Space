@@ -346,6 +346,54 @@ func GetPostHandler(c *fiber.Ctx) error {
 	return c.JSON(post)
 }
 
+func GetTopicsHandler(c *fiber.Ctx) error {
+	topics, err := db.GetTopics()
+	if err != nil {
+		log.Println("Failed to get topics in GetTopicsHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(topics)
+}
+
+func IsAdminHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if user.Role != entity.RoleAdmin {
+		log.Println("User is not an admin in IsAdminHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
 func LikePostHandler(c *fiber.Ctx) error {
 
 	like := c.Query("type", "like")
@@ -488,36 +536,29 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
-	reqTopicsInterface, ok := reqBody["topics"]
-	var reqTopics []interface{}
-	if ok {
-		reqTopics, ok = reqTopicsInterface.([]interface{})
-		if !ok {
-			log.Printf("Failed to get topics from request body in CreatePostHandler: %v is %T", reqTopicsInterface, reqTopicsInterface)
-			return c.SendStatus(fiber.StatusBadRequest)
-		}
-	}
-	topics := []entity.Topic{}
-	for _, topicName := range reqTopics {
-		topicName, ok := topicName.(string)
-		if !ok {
-			log.Printf("Failed to get topic name from request body in CreatePostHandler: %v is %T", topicName, topicName)
-			return c.SendStatus(fiber.StatusBadRequest)
-		}
-		if topic, err := db.GetTopicByName(topicName); err != nil {
-			topics = append(topics, *topic)
-		} else {
-			log.Printf("Failed to find %v in CreatePostHandler", topicName)
-		}
-	}
-
 	post := &entity.Post{
 		Content: postContent,
 		Author:  user,
 	}
 
-	if len(topics) > 0 {
+	reqTopics, ok := reqBody["topics"].([]interface{})
+	if ok {
+		topics := []entity.Topic{}
+		for _, topicName := range reqTopics {
+			topicName, ok := topicName.(string)
+			if !ok {
+				log.Printf("Failed to get topic name from request body in CreatePostHandler: %v is %T", topicName, topicName)
+				return c.SendStatus(fiber.StatusBadRequest)
+			}
+			if topic, err := db.GetTopicByName(topicName); err != nil {
+				log.Printf("Failed to find %v in CreatePostHandler: %v", topicName, err)
+			} else {
+				topics = append(topics, *topic)
+			}
+		}
 		post.Topics = topics
+	} else {
+		log.Println("Failed to get topics from request body in CreatePostHandler, ignoring...")
 	}
 
 	if err := db.AddPost(post); err != nil {
@@ -525,6 +566,64 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(post)
+}
+
+func CreateTopicHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if role, ok := sess.Get("userRole").(entity.Role); !ok || role != entity.RoleAdmin {
+		log.Println("User is not an admin in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if user.Role != entity.RoleAdmin {
+		log.Println("User is not an admin in CreateTopicHandler (from DB)")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	topicName := c.Params("topicName")
+	if len(topicName) < 1 {
+		log.Println("Failed to get topicName from params in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	topic := &entity.Topic{
+		Name: topicName,
+	}
+
+	if err := db.CreateTopic(topic); err != nil {
+		log.Println("Failed to create topic in CreateTopicHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.JSON(topic)
 }
 
 func CreateUserHandler(c *fiber.Ctx) error {
