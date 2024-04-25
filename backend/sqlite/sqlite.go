@@ -117,7 +117,7 @@ func (db *DB) GetPost(postID uint) (*entity.Post, error) {
 	defer db.Unlock()
 
 	post := &entity.Post{}
-	err := db.gormDB.Preload("LikedBy").Preload("Author").First(post, "id = ?", postID).Error
+	err := db.gormDB.Preload("LikedBy").Preload("Author").Preload("Topics").First(post, "id = ?", postID).Error
 	return post, err
 }
 
