@@ -1,11 +1,11 @@
 import React, {useContext} from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 
-import Tabs from '../components/common/Tabs';
+// import Tabs from '../components/common/Tabs';
 import { UserContext } from '../contexts/userContext';
 
 import PostsView from '../views/PostsView';
-import DiscussionsView from '../views/DiscussionsView';
+// import DiscussionsView from '../views/DiscussionsView';
 
 const tabs = [
     { label: 'Posts', content: 'Content 1' },
@@ -32,15 +32,15 @@ export default function Home() {
                     
                 }
             </div>
-            <Tabs tabs={tabs} onSelect={handleSelect} />
-            {
-                tabIndex === 0 &&
+            {/* <Tabs tabs={tabs} onSelect={handleSelect} /> */}
+            {/*
+                tabIndex === 0 &&*/
                 <PostsView />
             }
-            {
+            {/* {
                 tabIndex === 1 &&
                 <DiscussionsView />
-            }
+            } */}
         </div>
     );
 }

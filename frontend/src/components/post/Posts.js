@@ -12,8 +12,7 @@ export default function Posts(props) {
 }
 
 // export function Post({postID, displayName, avatar, content, date, topics, likes, isLiked}) {
-export function Post({postData: {id, author: {display_name, avatar_url, role}, content, created_at, topics, likes, liked_by}}, showLink) {
-    if (showLink === undefined) showLink = true;
+export function Post({postData: {id, author: {display_name, avatar_url}, content, created_at, topics, likes, liked_by}, showLink}) {
     const {user} = React.useContext(UserContext);
     const [upvoteSelected, setUpvoteSelected] = React.useState(liked_by?.map(u => u.id).some(id => id === user.id));
     const [likesCount, setLikesCount] = React.useState(likes);
@@ -39,36 +38,29 @@ export function Post({postData: {id, author: {display_name, avatar_url, role}, c
             {
                 showLink && 
                 <div className='post-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t hover:cursor-pointer' onClick={showLink ? handlePostClick : undefined}>
-                    <img src={avatar_url} alt='avatar' />
+                    <img width={25} src={avatar_url} alt='avatar' />
                     <p>@{display_name ?? 'placeholder'}</p>
-                    <ul className='flex flex-row gap-2 text-blue-500'>
-                        {
-                            topics?.map((topic, index) => (
-                                <li key={index}>topic/{topic}</li>
-                            ))
-                        }
-                    </ul>
                     <p>{created_at}</p>
                 </div>
             }
             {
                 !showLink &&
                 <div className='post-header text-xs flex flex-row text-wrap gap-3 p-2 bg-[#DDDDDD] w-full rounded-t'>
-                    <img src={avatar_url} alt='avatar' />
+                    <img width={25} src={avatar_url} alt='avatar' />
                     <p>@{display_name ?? 'placeholder'}</p>
-                    <ul className='flex flex-row gap-2 text-blue-500'>
-                        {
-                            topics?.map((topic, index) => (
-                                <li key={index}>topic/{topic}</li>
-                            ))
-                        }
-                    </ul>
                     <p>{created_at}</p>
                 </div>
             }
             {/* <hr /> */}
             <div className='post-content p-3 text-lg'>
                 <p>{content ?? 'This is a placeholder post.'}</p>
+                <ul className='flex flex-row gap-2 text-blue-500'>
+                    {
+                        topics?.map((topic, index) => (
+                            <li key={index}>#{topic["name"]}</li>
+                        ))
+                    }
+                </ul>
             </div>
             <div className='vote-footer p-3'>
                 <div className='vote-footer-left flex flex-row gap-3'>

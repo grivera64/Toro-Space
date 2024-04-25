@@ -29,13 +29,21 @@ export default function PostsView() {
         if (newPostContent == null || newPostContent.length === 0) {
             return;
         }
+
+        const nonHashtagMessage = newPostContent.replace(/#[a-zA-Z0-9]+/g, '');
+        const hashtags = [...new Set(newPostContent.match(/#[a-zA-Z0-9]+/g) || [])];
+        console.log(nonHashtagMessage);
+        console.log(hashtags);
+
         const response = await fetch(`http://localhost:3030/account/self/user/${user.id}/post`, {
             method: 'POST',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ content: newPostContent })
+            // body: JSON.stringify({ content: newPostContent })
+            // Remove the hashtags from the content and send them as topics
+            body: JSON.stringify({ content: nonHashtagMessage, topics: hashtags.map(tag => tag.substring(1))})
         });
 
         if (response.status !== 200) {
@@ -72,7 +80,7 @@ export default function PostsView() {
                         onChange={(e) => setNewPostContent(e.target.value)}
                     ></textarea>
                     <button
-                        className="ml-2 px-4 py-2 bg-blue-500 text-white rounded-md"
+                        className="ml-2 px-4 py-2 bg-blue-500 hover:bg-[#1b62d6] text-white rounded-md transition-colors duration-300"
                         onClick={handlePostClick}
                     >
                         Post

@@ -41,8 +41,8 @@ export default function PostPage() {
     return (
         <div className='p-10'>
             <button className='' onClick={() => {
-                if (window.history.length > 1) {
-                    window.history.back();
+                if (window.history.length > 2) {
+                    window.location.href = document.referrer;
                 } else {
                     window.location.href = '/home';
                 }
