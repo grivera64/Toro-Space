@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -319,9 +320,10 @@ func GetUserHandler(c *fiber.Ctx) error {
 
 func GetPostsHandler(c *fiber.Ctx) error {
 	postParams := &sqlite.PostParams{
-		Before:   c.Query("before", ""),
-		After:    c.Query("after", ""),
-		PageSize: c.QueryInt("pageSize", 10),
+		Before:      c.Query("before", ""),
+		After:       c.Query("after", ""),
+		PageSize:    c.QueryInt("pageSize", 10),
+		SearchQuery: c.Query("search_query", ""),
 	}
 
 	posts, err := db.GetPosts(postParams)
@@ -537,7 +539,7 @@ func CreatePostHandler(c *fiber.Ctx) error {
 	}
 
 	post := &entity.Post{
-		Content: postContent,
+		Content: strings.TrimSpace(postContent),
 		Author:  user,
 	}
 

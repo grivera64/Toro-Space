@@ -11,9 +11,10 @@ import (
 )
 
 type PostParams struct {
-	Before   string `json:"before"`
-	After    string `json:"after"`
-	PageSize int    `json:"page_size"`
+	Before      string `json:"before"`
+	After       string `json:"after"`
+	PageSize    int    `json:"page_size"`
+	SearchQuery string `json:"search_query"`
 }
 
 type DB struct {
@@ -104,6 +105,10 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 
 	if params.After != "" {
 		query = query.Where("id > ?", params.After)
+	}
+
+	if params.SearchQuery != "" {
+		query = query.Where("content LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
 	}
 
 	err := query.Limit(params.PageSize).
