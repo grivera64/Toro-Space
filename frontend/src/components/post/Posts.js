@@ -33,6 +33,20 @@ export function Post({postData: {id, author: {display_name, avatar_url}, content
         window.location.href = `/posts/${id}`;
     };
 
+    const words = content.split(' ');
+    content = words.map((word, index) => {
+        const urlRegex = /^(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/gm;
+        if (urlRegex.test(word)) {
+            return (
+                <a className='text-blue-600 hover:underline hover:underline-offset-2' key={index} href={word.startsWith('http') ? word : `https://${word}`} target="_blank" rel="noopener noreferrer">{word}</a>
+            );
+        } else {
+            return (
+                <span key={index}>{word} </span>
+            );
+        }
+    });
+
     return (
         <div className='post container rounded-md border-2 border-gray-300 w-1/2'>
             {
