@@ -15,11 +15,32 @@ func GetPostsHandler(c *fiber.Ctx) error {
 	postParams := &sqlite.PostParams{
 		Before:      c.Query("before", ""),
 		After:       c.Query("after", ""),
-		PageSize:    c.QueryInt("pageSize", 10),
+		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
 	}
 
 	posts, err := db.GetPosts(postParams)
+	if err != nil {
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+	return c.JSON(posts)
+}
+
+func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
+	organizationID, err := c.ParamsInt("organizationID")
+	if err != nil {
+		log.Println("Failed to get organizationID from params in GetPostsByOrganizationHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	postParams := &sqlite.PostParams{
+		Before:      c.Query("before", ""),
+		After:       c.Query("after", ""),
+		PageSize:    c.QueryInt("page_size", 10),
+		SearchQuery: c.Query("search_query", ""),
+	}
+
+	posts, err := db.GetPostsByOrganization(uint(organizationID), postParams)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}

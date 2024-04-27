@@ -28,6 +28,11 @@ func SetupRoutes(app *fiber.App) {
 	// Endpoint: /topics
 	app.Get("/topics", handler.GetTopicsHandler)
 
+	// Endpoint: /organizations
+	app.Get("/organizations", handler.GetOrganizationsHandler)
+	app.Get("/organizations/:organizationID", handler.GetOrganizationHandler)
+	app.Get("/organizations/:organizationID/posts", handler.GetPostsByOrganizationHandler)
+
 	// Endpoint: /auth/google
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
