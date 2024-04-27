@@ -17,6 +17,13 @@ type PostParams struct {
 	SearchQuery string `json:"search_query"`
 }
 
+type OrganizationParams struct {
+	Before      string `json:"before"`
+	After       string `json:"after"`
+	PageSize    int    `json:"page_size"`
+	SearchQuery string `json:"search_query"`
+}
+
 type DB struct {
 	gormDB *gorm.DB
 	sync.Mutex
@@ -108,7 +115,18 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 	}
 
 	if params.SearchQuery != "" {
-		query = query.Where("content LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
+		var matchingIDs []uint64
+		searchQuery := fmt.Sprintf("%%%s%%", params.SearchQuery)
+		db.gormDB.
+			Table("posts").
+			Select("posts.id").
+			Joins("JOIN post_topics ON posts.id = post_topics.post_id").
+			Joins("JOIN topics ON post_topics.topic_id = topics.id").
+			Where("topics.name LIKE ?", searchQuery).
+			Distinct().
+			Pluck("posts.id", &matchingIDs)
+
+		query = query.Where("(content LIKE (?)) OR (posts.id IN (?))", fmt.Sprintf("%%%s%%", params.SearchQuery), matchingIDs)
 	}
 
 	err := query.Limit(params.PageSize).
@@ -126,7 +144,7 @@ func (db *DB) GetPost(postID uint) (*entity.Post, error) {
 	return post, err
 }
 
-func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, error) {
+func (db *DB) GetPostsByOrganization(id uint, params *PostParams) ([]*entity.Post, error) {
 	db.Lock()
 	defer db.Unlock()
 
@@ -137,23 +155,46 @@ func (db *DB) GetPostsByUserID(id uint, params *PostParams) ([]*entity.Post, err
 		}
 	}
 
-	var posts []*entity.Post
-	query := db.gormDB.Preload("LikedBy").Preload("Author").
+	{
+		user := &entity.User{}
+		db.gormDB.First(user, "id = ?", id)
+		if user.Role != entity.RoleOrganization {
+			return nil, fmt.Errorf("user's role is not organization")
+		}
+	}
+
+	query := db.gormDB.Preload("LikedBy").Preload("Author").Preload("Topics").
 		Order("created_at DESC").
 		Where("author_id = ?", id)
 
 	if params.Before != "" {
-		query = query.Where("created_at < ?", params.Before)
+		query = query.Where("id < ?", params.Before)
 	}
 
 	if params.After != "" {
-		query = query.Where("created_at > ?", params.After)
+		query = query.Where("id > ?", params.After)
+	}
+
+	if params.SearchQuery != "" {
+		var matchingIDs []uint64
+		searchQuery := fmt.Sprintf("%%%s%%", params.SearchQuery)
+		db.gormDB.
+			Table("posts").
+			Select("posts.id").
+			Joins("JOIN post_topics ON posts.id = post_topics.post_id").
+			Joins("JOIN topics ON post_topics.topic_id = topics.id").
+			Where("topics.name LIKE ?", searchQuery).
+			Distinct().
+			Pluck("posts.id", &matchingIDs)
+
+		query = query.Where("(content LIKE (?)) OR (posts.id IN (?))", fmt.Sprintf("%%%s%%", params.SearchQuery), matchingIDs)
 	}
 
 	if params.PageSize <= 0 {
 		params.PageSize = 10
 	}
 
+	var posts []*entity.Post
 	err := query.Limit(params.PageSize).
 		Find(&posts).
 		Error
@@ -262,4 +303,45 @@ func (db *DB) GetTopicByName(name string) (*entity.Topic, error) {
 	topic := &entity.Topic{}
 	err := db.gormDB.First(topic, "name = ?", name).Error
 	return topic, err
+}
+
+func (db *DB) GetOrganizations(params *OrganizationParams) ([]*entity.User, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	if params == nil {
+		params = &OrganizationParams{
+			PageSize: 10,
+		}
+	}
+
+	var organizations []*entity.User
+	query := db.gormDB.
+		Where("role = ?", "organization")
+
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+	if params.SearchQuery != "" {
+		query = query.Where("name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
+	}
+
+	if params.PageSize <= 0 {
+		params.PageSize = 10
+	}
+	err := query.Limit(params.PageSize).
+		Find(&organizations).Error
+	return organizations, err
+}
+
+func (db *DB) GetOrganization(id uint) (*entity.User, error) {
+	db.Lock()
+	defer db.Unlock()
+
+	organization := &entity.User{}
+	err := db.gormDB.First(organization, "id = ?", id).Error
+	return organization, err
 }
