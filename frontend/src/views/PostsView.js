@@ -8,11 +8,12 @@ import { UserContext } from '../contexts/userContext';
 export default function PostsView() {
     const [posts, setPosts] = React.useState(null);
     const {user} = React.useContext(UserContext);
+    const [latestPost, setLatestPost] = React.useState(null);
 
     React.useEffect(() => {
         async function fetchData() {
             try {
-                const response = await fetch('http://localhost:3030/posts/?pageSize=10');
+                const response = await fetch('http://localhost:3030/posts?pageSize=10');
                 const data = await response.json();
                 console.log(data);
                 setPosts(data);
@@ -22,7 +23,7 @@ export default function PostsView() {
             }
         }
         fetchData();
-    }, []);
+    }, [latestPost]);
     const [newPostContent, setNewPostContent] = React.useState('');
 
     const handlePostClick = async () => {
@@ -51,10 +52,7 @@ export default function PostsView() {
             return;
         }
         const data = await response.json();
-        console.log(data);
-        // Update the posts state with the new post
-        setPosts([data, ...posts]);
-        // Clear the new post content
+        setLatestPost(data);
         setNewPostContent('');
     };
 
