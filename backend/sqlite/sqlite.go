@@ -138,7 +138,7 @@ func (db *DB) GetPosts(params *PostParams) (*PostsResult, error) {
 		Order("created_at DESC")
 
 	if !params.GetHidden {
-		query = query.Where("hidden = ?", false)
+		query = query.Where("hidden <> ?", true)
 	}
 
 	if params.SearchQuery != "" {

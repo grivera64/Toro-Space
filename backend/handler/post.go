@@ -17,12 +17,17 @@ func GetPostsHandler(c *fiber.Ctx) error {
 		sess = nil
 	}
 
+	var userRole any
+	var ok bool
+	if sess != nil {
+		userRole, ok = sess.Get("userRole").(entity.Role)
+	}
 	postParams := &sqlite.PostParams{
 		Before:      c.Query("before", ""),
 		After:       c.Query("after", ""),
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
-		GetHidden:   sess != nil && sess.Get("userRole").(entity.Role) == entity.RoleAdmin,
+		GetHidden:   sess != nil && ok && userRole == entity.RoleAdmin,
 	}
 
 	postsResult, err := db.GetPosts(postParams)
