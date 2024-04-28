@@ -17,6 +17,13 @@ type PostParams struct {
 	SearchQuery string `json:"search_query"`
 }
 
+type PostsResult struct {
+	Posts     []*entity.Post `json:"posts"`
+	Count     int            `json:"count"`
+	HasBefore bool           `json:"has_before"`
+	HasAfter  bool           `json:"has_after"`
+}
+
 type OrganizationParams struct {
 	Before      string `json:"before"`
 	After       string `json:"after"`
@@ -24,9 +31,25 @@ type OrganizationParams struct {
 	SearchQuery string `json:"search_query"`
 }
 
+type OrganizationsResult struct {
+	Organizations []*entity.User `json:"organizations"`
+	Count         int            `json:"count"`
+	HasBefore     bool           `json:"has_before"`
+	HasAfter      bool           `json:"has_after"`
+}
+
 type TopicParams struct {
+	Before      string `json:"before"`
+	After       string `json:"after"`
 	PageSize    int    `json:"page_size"`
 	SearchQuery string `json:"search_query"`
+}
+
+type TopicsResult struct {
+	Topics    []*entity.Topic `json:"topics"`
+	Count     int             `json:"count"`
+	HasBefore bool            `json:"has_before"`
+	HasAfter  bool            `json:"has_after"`
 }
 
 type DB struct {
@@ -96,7 +119,7 @@ func (db *DB) AddPost(post *entity.Post) error {
 	return db.gormDB.Preload("Topics").Create(post).Error
 }
 
-func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
+func (db *DB) GetPosts(params *PostParams) (*PostsResult, error) {
 	db.Lock()
 	defer db.Unlock()
 
@@ -106,18 +129,13 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 			PageSize: 10,
 		}
 	}
+	if params.PageSize <= 0 {
+		params.PageSize = 10
+	}
 
 	var posts []*entity.Post
-	query := db.gormDB.Preload("LikedBy").Preload("Author").Preload("Topics").
+	query := db.gormDB.Model(&entity.Post{}).Preload("LikedBy").Preload("Author").Preload("Topics").
 		Order("created_at DESC")
-
-	if params.Before != "" {
-		query = query.Where("id < ?", params.Before)
-	}
-
-	if params.After != "" {
-		query = query.Where("id > ?", params.After)
-	}
 
 	if params.SearchQuery != "" {
 		var matchingIDs []uint64
@@ -134,10 +152,44 @@ func (db *DB) GetPosts(params *PostParams) ([]*entity.Post, error) {
 		query = query.Where("(content LIKE (?)) OR (posts.id IN (?))", fmt.Sprintf("%%%s%%", params.SearchQuery), matchingIDs)
 	}
 
+	var totalCount int64
+	var firstPost entity.Post
+	var lastPost entity.Post
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+	if err := query.First(&firstPost).Error; err != nil {
+		return nil, err
+	}
+	if err := query.Last(&lastPost).Error; err != nil {
+		return nil, err
+	}
+
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+
 	err := query.Limit(params.PageSize).
 		Find(&posts).
 		Error
-	return posts, err
+
+	result := &PostsResult{}
+	if len(posts) > 0 {
+		result.HasBefore = posts[len(posts)-1].ID != lastPost.ID
+		result.HasAfter = posts[0].ID != firstPost.ID
+	} else {
+		result.HasBefore = false
+		result.HasAfter = false
+	}
+
+	result.Posts = posts
+	result.Count = len(posts)
+
+	return result, err
 }
 
 func (db *DB) GetPost(postID uint) (*entity.Post, error) {
@@ -149,7 +201,7 @@ func (db *DB) GetPost(postID uint) (*entity.Post, error) {
 	return post, err
 }
 
-func (db *DB) GetPostsByOrganization(id uint, params *PostParams) ([]*entity.Post, error) {
+func (db *DB) GetPostsByOrganization(id uint, params *PostParams) (*PostsResult, error) {
 	db.Lock()
 	defer db.Unlock()
 
@@ -158,6 +210,9 @@ func (db *DB) GetPostsByOrganization(id uint, params *PostParams) ([]*entity.Pos
 		params = &PostParams{
 			PageSize: 10,
 		}
+	}
+	if params.PageSize <= 0 {
+		params.PageSize = 10
 	}
 
 	{
@@ -172,14 +227,6 @@ func (db *DB) GetPostsByOrganization(id uint, params *PostParams) ([]*entity.Pos
 		Order("created_at DESC").
 		Where("author_id = ?", id)
 
-	if params.Before != "" {
-		query = query.Where("id < ?", params.Before)
-	}
-
-	if params.After != "" {
-		query = query.Where("id > ?", params.After)
-	}
-
 	if params.SearchQuery != "" {
 		var matchingIDs []uint64
 		searchQuery := fmt.Sprintf("%%%s%%", params.SearchQuery)
@@ -195,15 +242,45 @@ func (db *DB) GetPostsByOrganization(id uint, params *PostParams) ([]*entity.Pos
 		query = query.Where("(content LIKE (?)) OR (posts.id IN (?))", fmt.Sprintf("%%%s%%", params.SearchQuery), matchingIDs)
 	}
 
-	if params.PageSize <= 0 {
-		params.PageSize = 10
+	var totalCount int64
+	var firstPost entity.Post
+	var lastPost entity.Post
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+	if err := query.First(&firstPost).Error; err != nil {
+		return nil, err
+	}
+	if err := query.Last(&lastPost).Error; err != nil {
+		return nil, err
 	}
 
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+
+	result := &PostsResult{}
 	var posts []*entity.Post
 	err := query.Limit(params.PageSize).
 		Find(&posts).
 		Error
-	return posts, err
+
+	if len(posts) > 0 {
+		result.HasBefore = posts[len(posts)-1].ID != lastPost.ID
+		result.HasAfter = posts[0].ID != firstPost.ID
+	} else {
+		result.HasBefore = false
+		result.HasAfter = false
+	}
+
+	result.Posts = posts
+	result.Count = len(posts)
+
+	return result, err
 }
 
 func (db *DB) AddLikeToPost(postID uint, user *entity.User) error {
@@ -292,7 +369,7 @@ func (db *DB) CreateTopic(topic *entity.Topic) error {
 	return db.gormDB.Create(topic).Error
 }
 
-func (db *DB) GetTopics(params *TopicParams) ([]*entity.Topic, error) {
+func (db *DB) GetTopics(params *TopicParams) (*TopicsResult, error) {
 	db.Lock()
 	defer db.Unlock()
 
@@ -307,15 +384,48 @@ func (db *DB) GetTopics(params *TopicParams) ([]*entity.Topic, error) {
 	}
 
 	var topics []*entity.Topic
-	query := db.gormDB
+	query := db.gormDB.Model(&entity.Topic{})
 
 	if params.SearchQuery != "" {
 		query = query.Where("name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
 	}
 
+	var totalCount int64
+	var firstTopic entity.Topic
+	var lastTopic entity.Topic
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+	if err := query.First(&firstTopic).Error; err != nil {
+		return nil, err
+	}
+	if err := query.Last(&lastTopic).Error; err != nil {
+		return nil, err
+	}
+
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+
+	result := &TopicsResult{}
+	if len(topics) > 0 {
+		result.HasBefore = topics[len(topics)-1].ID != lastTopic.ID
+		result.HasAfter = topics[0].ID != firstTopic.ID
+	} else {
+		result.HasBefore = false
+		result.HasAfter = false
+	}
+
 	err := query.Limit(params.PageSize).
 		Find(&topics).Error
-	return topics, err
+
+	result.Topics = topics
+	result.Count = len(topics)
+
+	return result, err
 }
 
 func (db *DB) GetTopicByName(name string) (*entity.Topic, error) {
@@ -327,7 +437,7 @@ func (db *DB) GetTopicByName(name string) (*entity.Topic, error) {
 	return topic, err
 }
 
-func (db *DB) GetOrganizations(params *OrganizationParams) ([]*entity.User, error) {
+func (db *DB) GetOrganizations(params *OrganizationParams) (*OrganizationsResult, error) {
 	db.Lock()
 	defer db.Unlock()
 
@@ -338,15 +448,9 @@ func (db *DB) GetOrganizations(params *OrganizationParams) ([]*entity.User, erro
 	}
 
 	var organizations []*entity.User
-	query := db.gormDB.
+	query := db.gormDB.Model(&entity.User{}).
 		Where("role = ?", "organization")
 
-	if params.Before != "" {
-		query = query.Where("id < ?", params.Before)
-	}
-	if params.After != "" {
-		query = query.Where("id > ?", params.After)
-	}
 	if params.SearchQuery != "" {
 		query = query.Where("display_name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
 	}
@@ -354,9 +458,43 @@ func (db *DB) GetOrganizations(params *OrganizationParams) ([]*entity.User, erro
 	if params.PageSize <= 0 {
 		params.PageSize = 10
 	}
+
+	var totalCount int64
+	var firstOrganization entity.User
+	var lastOrganization entity.User
+	if err := query.Count(&totalCount).Error; err != nil {
+		return nil, err
+	}
+	if err := query.First(&firstOrganization).Error; err != nil {
+		return nil, err
+	}
+	if err := query.Last(&lastOrganization).Error; err != nil {
+		return nil, err
+	}
+
+	if params.Before != "" {
+		query = query.Where("id < ?", params.Before)
+	}
+	if params.After != "" {
+		query = query.Where("id > ?", params.After)
+	}
+
+	result := &OrganizationsResult{}
+	if len(organizations) > 0 {
+		result.HasBefore = organizations[len(organizations)-1].ID != lastOrganization.ID
+		result.HasAfter = organizations[0].ID != firstOrganization.ID
+	} else {
+		result.HasBefore = false
+		result.HasAfter = false
+	}
+
 	err := query.Limit(params.PageSize).
 		Find(&organizations).Error
-	return organizations, err
+
+	result.Organizations = organizations
+	result.Count = len(organizations)
+
+	return result, err
 }
 
 func (db *DB) GetOrganization(id uint) (*entity.User, error) {
