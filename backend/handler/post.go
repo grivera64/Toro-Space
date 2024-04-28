@@ -62,6 +62,74 @@ func GetPostHandler(c *fiber.Ctx) error {
 	return c.JSON(post)
 }
 
+func DeletePostHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if user.Role != entity.RoleAdmin && user.Role != entity.RoleOrganization {
+		log.Println("User is not an admin or organization in CreatePostHandler (from DB)")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sess.SetExpiry(30 * time.Minute)
+	if err := sess.Save(); err != nil {
+		log.Println("Failed to save sesion store in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in DeletePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	post, err := db.GetPost(uint(postID))
+	if err != nil {
+		log.Println("Failed to get post by ID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	if user.Role != entity.RoleAdmin && post.Author.ID != sessUserID {
+		log.Println("User is not the author of the post in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if err := db.DeletePost(uint(postID)); err != nil {
+		log.Println("Failed to delete post in DeletePostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+
+}
+
 func LikePostHandler(c *fiber.Ctx) error {
 
 	like := c.Query("type", "like")
