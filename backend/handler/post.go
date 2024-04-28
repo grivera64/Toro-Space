@@ -127,7 +127,6 @@ func DeletePostHandler(c *fiber.Ctx) error {
 	}
 
 	return c.SendStatus(fiber.StatusOK)
-
 }
 
 func LikePostHandler(c *fiber.Ctx) error {
