@@ -35,6 +35,9 @@ export default function NavigationBar() {
                     )
                 }
                 {
+                    user?.role === 'admin' && <li className='hover:underline hover:cursor-pointer text-white text-lg font-bold transition duration-300 ease-in-out'><Link to='/admin'>Admin</Link></li>
+                }
+                {
                     (!loggedIn) &&
                     <button
                     className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'

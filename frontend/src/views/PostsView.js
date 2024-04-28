@@ -7,21 +7,27 @@ import { UserContext } from '../contexts/userContext';
 
 export default function PostsView() {
     const [posts, setPosts] = React.useState(null);
+    const [hasNextPage, setHasNextPage] = React.useState(false);
+    const [hasPrevPage, setHasPrevPage] = React.useState(false);
+
     const {user} = React.useContext(UserContext);
     const [latestPost, setLatestPost] = React.useState(null);
     const [searchQuery, setSearchQuery] = React.useState('');
 
     const [endpoint, setEndpoint] = React.useState('/posts?pageSize=10')
-    const [prevEndpoint, setPrevEndpoint] = React.useState('')
     React.useEffect(() => {
         async function fetchData() {
             try {
                 const response = await fetch(`http://localhost:3030${endpoint}&search_query=${searchQuery}`);
                 const data = await response.json();
                 console.log(data);
-                setPosts(data);
+                setPosts(data['posts']);
+                setHasNextPage(data['has_before']);
+                setHasPrevPage(data['has_after']);
             } catch (error) {
                 setPosts([]);
+                setHasNextPage(false);
+                setHasPrevPage(false);
                 console.error('Failed to fetch posts:', error);
             }
         }
@@ -108,6 +114,22 @@ export default function PostsView() {
                     />
                 ))}
             </Posts>
+            <div className="flex justify-center mt-4 gap-2">
+                <button
+                    className="px-4 py-2 bg-[#860038] hover:bg-[#680018] disabled:bg-gray-500 disabled:hover:cursor-not-allowed text-white rounded-md transition-colors duration-300"
+                    onClick={() => setEndpoint(`/posts?pageSize=10&after=${posts[0].id}`)}
+                    disabled={!hasPrevPage}
+                >
+                    Previous Page
+                </button>
+                <button
+                className="px-4 py-2 bg-[#860038] hover:bg-[#680018] disabled:bg-gray-500 disabled:hover:cursor-not-allowed text-white rounded-md transition-colors duration-300"
+                    onClick={() => setEndpoint(`/posts?pageSize=10&before=${posts[posts.length - 1].id}`)}
+                    disabled={!hasNextPage} // Disable the button if there is no previous page
+                >
+                    Next Page
+                </button>
+            </div>
         </div>
     );
 }
