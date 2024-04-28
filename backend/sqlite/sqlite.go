@@ -24,6 +24,11 @@ type OrganizationParams struct {
 	SearchQuery string `json:"search_query"`
 }
 
+type TopicParams struct {
+	PageSize    int    `json:"page_size"`
+	SearchQuery string `json:"search_query"`
+}
+
 type DB struct {
 	gormDB *gorm.DB
 	sync.Mutex
@@ -287,12 +292,29 @@ func (db *DB) CreateTopic(topic *entity.Topic) error {
 	return db.gormDB.Create(topic).Error
 }
 
-func (db *DB) GetTopics() ([]*entity.Topic, error) {
+func (db *DB) GetTopics(params *TopicParams) ([]*entity.Topic, error) {
 	db.Lock()
 	defer db.Unlock()
 
+	if params == nil {
+		params = &TopicParams{
+			PageSize: 10,
+		}
+	}
+
+	if params.PageSize <= 0 {
+		params.PageSize = 10
+	}
+
 	var topics []*entity.Topic
-	err := db.gormDB.Find(&topics).Error
+	query := db.gormDB
+
+	if params.SearchQuery != "" {
+		query = query.Where("name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
+	}
+
+	err := query.Limit(params.PageSize).
+		Find(&topics).Error
 	return topics, err
 }
 
@@ -326,7 +348,7 @@ func (db *DB) GetOrganizations(params *OrganizationParams) ([]*entity.User, erro
 		query = query.Where("id > ?", params.After)
 	}
 	if params.SearchQuery != "" {
-		query = query.Where("name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
+		query = query.Where("display_name LIKE ?", fmt.Sprintf("%%%s%%", params.SearchQuery))
 	}
 
 	if params.PageSize <= 0 {
