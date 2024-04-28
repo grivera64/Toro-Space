@@ -7,13 +7,10 @@ import React from "react";
 //     'Users',
 // ];
 
-export default function FilterSearch({setNewQuery}) {
-    if (!setNewQuery) {
-        setNewQuery = () => {};
-    }
+export default function FilterSearch({setSearchQuery}) {
     const [text, setText] = React.useState('');
     const handleClick = () => {
-        setNewQuery(text);
+        setSearchQuery(text);
     };
     const handleKeyDown = (e) => {
         if (e.key === 'Enter') {
@@ -31,7 +28,7 @@ export default function FilterSearch({setNewQuery}) {
                     )
                 }
             </select> */}
-            <button className='bg-[#860038] text-white hover:bg-[#680018] p-2 transition-colors duration-300'
+            <button className='bg-[#860038] text-white rounded-md hover:bg-[#680018] p-2 transition-colors duration-300'
                 onClick={handleClick}
             >Search</button>
         </div>

@@ -9,13 +9,14 @@ export default function PostsView() {
     const [posts, setPosts] = React.useState(null);
     const {user} = React.useContext(UserContext);
     const [latestPost, setLatestPost] = React.useState(null);
-    const [newQuery, setNewQuery] = React.useState('');
+    const [searchQuery, setSearchQuery] = React.useState('');
 
+    const [endpoint, setEndpoint] = React.useState('/posts?pageSize=10')
+    const [prevEndpoint, setPrevEndpoint] = React.useState('')
     React.useEffect(() => {
         async function fetchData() {
             try {
-                console.log(`fetching posts at: ${'http://localhost:3030/posts?pageSize=10&search_query=' + newQuery}`)
-                const response = await fetch('http://localhost:3030/posts?pageSize=10&search_query=' + newQuery);
+                const response = await fetch(`http://localhost:3030${endpoint}&search_query=${searchQuery}`);
                 const data = await response.json();
                 console.log(data);
                 setPosts(data);
@@ -25,7 +26,7 @@ export default function PostsView() {
             }
         }
         fetchData();
-    }, [latestPost, newQuery]);
+    }, [latestPost, searchQuery, endpoint]);
     const [newPostContent, setNewPostContent] = React.useState('');
 
     const handlePostClick = async () => {
@@ -61,7 +62,7 @@ export default function PostsView() {
     if (posts == null || user == null) {
         return (
             <div className='p-10'>
-                <FilterSearch setNewQuery={setNewQuery} />
+                <FilterSearch setSearchQuery={setSearchQuery} />
                 <p>Loading...</p>
             </div>
         )
@@ -69,7 +70,7 @@ export default function PostsView() {
 
     return (
         <div className='p-10'>
-            <FilterSearch setNewQuery={setNewQuery} />
+            <FilterSearch setSearchQuery={setSearchQuery} />
             {
                 user.role === 'organization' &&
                 <div className="flex justify-center items-center m-20">

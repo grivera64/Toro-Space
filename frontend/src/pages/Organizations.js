@@ -4,11 +4,12 @@ import FilterSearch from "../components/common/FilterSearch";
 
 export default function Organizations() {
     const [organizations, setOrganizations] = React.useState([]);
+    const [searchQuery, setSearchQuery] = React.useState('');
 
     React.useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await fetch('http://localhost:3030/organizations');
+                const response = await fetch('http://localhost:3030/organizations?search_query=' + searchQuery);
                 const data = await response.json();
                 setOrganizations(data);
             } catch (error) {
@@ -16,14 +17,13 @@ export default function Organizations() {
             }
         };
         fetchData();
-    }, []);
+    }, [searchQuery]);
 
     return (
         <div className='topics-page w-full h-auto'>
             <div className='justify-center m-auto flex flex-col gap-3 mt-3'>
                 <p className='text-5xl text-center'>Organizations</p>
-                {/* <FilterSearch setNewQuery={setQuery}/> */}
-                <FilterSearch />
+                <FilterSearch setSearchQuery={setSearchQuery}/>
                 <ul className='list-disc list-inside text-center'>
                     {/* <li><a className='underline' href='#'>IEEE_CC</a></li>
                     <li><a className='underline' href='#'>Google_Toros</a></li>
