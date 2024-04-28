@@ -15,6 +15,7 @@ type PostParams struct {
 	After       string `json:"after"`
 	PageSize    int    `json:"page_size"`
 	SearchQuery string `json:"search_query"`
+	GetHidden   bool   `json:"get_hidden"`
 }
 
 type PostsResult struct {
@@ -126,7 +127,8 @@ func (db *DB) GetPosts(params *PostParams) (*PostsResult, error) {
 	// By default, provide latest 10 posts
 	if params == nil {
 		params = &PostParams{
-			PageSize: 10,
+			PageSize:  10,
+			GetHidden: false,
 		}
 	}
 	if params.PageSize <= 0 {
@@ -134,6 +136,10 @@ func (db *DB) GetPosts(params *PostParams) (*PostsResult, error) {
 	}
 	query := db.gormDB.Model(&entity.Post{}).Preload("LikedBy").Preload("Author").Preload("Topics").
 		Order("created_at DESC")
+
+	if !params.GetHidden {
+		query = query.Where("hidden <> ?", true)
+	}
 
 	if params.SearchQuery != "" {
 		var matchingByTopic []uint64
@@ -211,6 +217,52 @@ func (db *DB) GetPost(postID uint) (*entity.Post, error) {
 	return post, err
 }
 
+func (db *DB) DeletePost(postID uint) error {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.First(post, "id = ?", postID).Error
+	if err != nil {
+		return err
+	}
+	return db.gormDB.Delete(post).Error
+}
+
+func (db *DB) HidePost(postID uint) error {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.First(post, "id = ?", postID).Error
+	if err != nil {
+		return err
+	}
+
+	if post.Hidden {
+		return nil
+	}
+	post.Hidden = true
+	return db.gormDB.Save(post).Error
+}
+
+func (db *DB) UnhidePost(postID uint) error {
+	db.Lock()
+	defer db.Unlock()
+
+	post := &entity.Post{}
+	err := db.gormDB.First(post, "id = ?", postID).Error
+	if err != nil {
+		return err
+	}
+
+	if !post.Hidden {
+		return nil
+	}
+	post.Hidden = false
+	return db.gormDB.Save(post).Error
+}
+
 func (db *DB) GetPostsByOrganization(id uint, params *PostParams) (*PostsResult, error) {
 	db.Lock()
 	defer db.Unlock()
@@ -236,6 +288,10 @@ func (db *DB) GetPostsByOrganization(id uint, params *PostParams) (*PostsResult,
 	query := db.gormDB.Preload("LikedBy").Preload("Author").Preload("Topics").
 		Order("created_at DESC").
 		Where("author_id = ?", id)
+
+	if !params.GetHidden {
+		query = query.Where("hidden = ?", false)
+	}
 
 	if params.SearchQuery != "" {
 		var matchingIDs []uint64
