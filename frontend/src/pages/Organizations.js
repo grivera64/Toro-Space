@@ -1,36 +1,35 @@
 import React from "react";
+
 import FilterSearch from "../components/common/FilterSearch";
 
-export default function Topics() {
-    const [topics, setTopics] = React.useState([]);
-    const [query, setQuery] = React.useState('');
+export default function Organizations() {
+    const [organizations, setOrganizations] = React.useState([]);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            // Fetch topics from the backend
             try {
-                const response = await fetch('http://localhost:3030/topics?search_query=' + query);
+                const response = await fetch('http://localhost:3030/organizations');
                 const data = await response.json();
-                setTopics(data);
+                setOrganizations(data);
             } catch (error) {
-                setTopics([{"name": "ERROR: Could not fetch topics"}]);
+                setOrganizations([]);
             }
         };
-        
         fetchData();
-    }, [query])
+    }, []);
 
     return (
         <div className='topics-page w-full h-auto'>
             <div className='justify-center m-auto flex flex-col gap-3 mt-3'>
-                <p className='text-5xl text-center'>Topics</p>
-                <FilterSearch setNewQuery={setQuery}/>
+                <p className='text-5xl text-center'>Organizations</p>
+                {/* <FilterSearch setNewQuery={setQuery}/> */}
+                <FilterSearch />
                 <ul className='list-disc list-inside text-center'>
                     {/* <li><a className='underline' href='#'>IEEE_CC</a></li>
                     <li><a className='underline' href='#'>Google_Toros</a></li>
                     <li><a className='underline' href='#'>Dr_Izaddoost_Club</a></li> */}
-                    {topics.map((topic, index) => (
-                        <li key={index}><a className='underline' href='#'>{topic["name"]}</a></li>
+                    {organizations.map((org, index) => (
+                        <li key={index}><a className='underline' href='#'>{org["display_name"]}</a></li>
                     ))}
                 </ul>
             </div>

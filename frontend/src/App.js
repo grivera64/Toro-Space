@@ -10,6 +10,7 @@ import PostPage from './pages/PostPage';
 import Home from './pages/Home';
 import Topics from './pages/Topics';
 import Select from './pages/Select';
+import Organizations from './pages/Organizations';
 
 function App() {
 
@@ -47,6 +48,7 @@ function App() {
               <Route path='/posts/:postId' element={<PostPage />} />
               <Route path='/select' element={<Select />} />
               <Route path='/topics' element={<Topics />} />
+              <Route path='/organizations' element={<Organizations />} />
               <Route path='*' element={<h1>Not Found</h1>} />
             </Routes>
           </UserContext.Provider>
