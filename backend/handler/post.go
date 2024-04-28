@@ -19,11 +19,11 @@ func GetPostsHandler(c *fiber.Ctx) error {
 		SearchQuery: c.Query("search_query", ""),
 	}
 
-	posts, err := db.GetPosts(postParams)
+	postsResult, err := db.GetPosts(postParams)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	return c.JSON(posts)
+	return c.JSON(postsResult)
 }
 
 func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
@@ -40,11 +40,11 @@ func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
 		SearchQuery: c.Query("search_query", ""),
 	}
 
-	posts, err := db.GetPostsByOrganization(uint(organizationID), postParams)
+	postsResult, err := db.GetPostsByOrganization(uint(organizationID), postParams)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	return c.JSON(posts)
+	return c.JSON(postsResult)
 }
 
 func GetPostHandler(c *fiber.Ctx) error {

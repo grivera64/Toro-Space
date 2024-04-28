@@ -12,11 +12,11 @@ func GetOrganizationsHandler(c *fiber.Ctx) error {
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
 	}
-	organizations, err := db.GetOrganizations(organizationParams)
+	organizationsResult, err := db.GetOrganizations(organizationParams)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	return c.JSON(organizations)
+	return c.JSON(organizationsResult)
 }
 
 func GetOrganizationHandler(c *fiber.Ctx) error {

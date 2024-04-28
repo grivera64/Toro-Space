@@ -12,10 +12,10 @@ func GetTopicsHandler(c *fiber.Ctx) error {
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
 	}
-	topics, err := db.GetTopics(topicParams)
+	topicsResult, err := db.GetTopics(topicParams)
 	if err != nil {
 		log.Println("Failed to get topics in GetTopicsHandler")
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
-	return c.JSON(topics)
+	return c.JSON(topicsResult)
 }
