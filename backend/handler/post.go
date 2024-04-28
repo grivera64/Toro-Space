@@ -12,11 +12,17 @@ import (
 )
 
 func GetPostsHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		sess = nil
+	}
+
 	postParams := &sqlite.PostParams{
 		Before:      c.Query("before", ""),
 		After:       c.Query("after", ""),
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
+		GetHidden:   sess != nil && sess.Get("userRole").(entity.Role) == entity.RoleAdmin,
 	}
 
 	postsResult, err := db.GetPosts(postParams)
@@ -27,6 +33,11 @@ func GetPostsHandler(c *fiber.Ctx) error {
 }
 
 func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		sess = nil
+	}
+
 	organizationID, err := c.ParamsInt("organizationID")
 	if err != nil {
 		log.Println("Failed to get organizationID from params in GetPostsByOrganizationHandler")
@@ -38,6 +49,7 @@ func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
 		After:       c.Query("after", ""),
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
+		GetHidden:   sess != nil && sess.Get("userRole").(entity.Role) == entity.RoleAdmin,
 	}
 
 	postsResult, err := db.GetPostsByOrganization(uint(organizationID), postParams)
@@ -124,6 +136,84 @@ func DeletePostHandler(c *fiber.Ctx) error {
 	if err := db.DeletePost(uint(postID)); err != nil {
 		log.Println("Failed to delete post in DeletePostHandler")
 		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
+}
+
+func HidePostHandler(c *fiber.Ctx) error {
+	sess, err := sessionStore.Get(c)
+	if err != nil {
+		log.Println("Failed to get session store in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessAccountID, ok := sess.Get("accountID").(uint)
+	if !ok {
+		log.Println("Failed to get accountID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sessUserID, ok := sess.Get("userID").(uint)
+	if !ok {
+		log.Println("Failed to get userID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	account, err := db.GetAccountByID(sessAccountID)
+	if err != nil {
+		log.Println("Failed to get account by ID in CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	user, err := util.BinarySearch(account.Users, entity.User{ID: sessUserID})
+	if err != nil {
+		log.Println("Failed to get user by ID in CreatePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	if user.Role != entity.RoleAdmin && user.Role != entity.RoleOrganization {
+		log.Println("User is not an admin or organization in CreatePostHandler (from DB)")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	sess.SetExpiry(30 * time.Minute)
+	if err := sess.Save(); err != nil {
+		log.Println("Failed to save sesion store in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	postID, err := c.ParamsInt("postID")
+	if err != nil {
+		log.Println("Failed to get postID from params in DeletePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	post, err := db.GetPost(uint(postID))
+	if err != nil {
+		log.Println("Failed to get post by ID in DeletePostHandler")
+		return c.SendStatus(fiber.StatusInternalServerError)
+	}
+
+	if user.Role != entity.RoleAdmin && post.Author.ID != sessUserID {
+		log.Println("User is not the author of the post in DeletePostHandler")
+		return c.SendStatus(fiber.StatusForbidden)
+	}
+
+	action := c.Query("action", "hide")
+	if action == "hide" {
+		if err := db.HidePost(uint(postID)); err != nil {
+			log.Println("Failed to delete post in DeletePostHandler")
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	} else if action == "unhide" {
+		if err := db.UnhidePost(uint(postID)); err != nil {
+			log.Println("Failed to delete post in DeletePostHandler")
+			return c.SendStatus(fiber.StatusInternalServerError)
+		}
+	} else {
+		log.Println("Invalid action in HidePostHandler")
+		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
 	return c.SendStatus(fiber.StatusOK)

@@ -24,6 +24,7 @@ func SetupRoutes(app *fiber.App) {
 	app.Get("/posts", handler.GetPostsHandler)
 	app.Get("/posts/:postID", handler.GetPostHandler)
 	app.Delete("/posts/:postID", handler.DeletePostHandler)
+	app.Put("/posts/:postID", handler.HidePostHandler)
 	app.Post("/posts/:postID/like", handler.LikePostHandler)
 
 	// Endpoint: /topics
