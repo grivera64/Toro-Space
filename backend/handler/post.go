@@ -27,7 +27,7 @@ func GetPostsHandler(c *fiber.Ctx) error {
 		After:       c.Query("after", ""),
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
-		GetHidden:   sess != nil && ok && userRole == entity.RoleAdmin,
+		GetHidden:   sess != nil && ((ok && userRole == entity.RoleAdmin) || (userRole == entity.RoleOrganization)),
 	}
 
 	postsResult, err := db.GetPosts(postParams)
@@ -49,12 +49,21 @@ func GetPostsByOrganizationHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
 
+	var userRole any
+	var user *entity.User
+	var ok bool
+	if sess != nil {
+		userRole, ok = sess.Get("userRole").(entity.Role)
+		if ok {
+			user, ok = sess.Get("userID").(*entity.User)
+		}
+	}
 	postParams := &sqlite.PostParams{
 		Before:      c.Query("before", ""),
 		After:       c.Query("after", ""),
 		PageSize:    c.QueryInt("page_size", 10),
 		SearchQuery: c.Query("search_query", ""),
-		GetHidden:   sess != nil && sess.Get("userRole").(entity.Role) == entity.RoleAdmin,
+		GetHidden:   sess != nil && ((ok && userRole == entity.RoleAdmin) || (user.ID == uint(organizationID))),
 	}
 
 	postsResult, err := db.GetPostsByOrganization(uint(organizationID), postParams)

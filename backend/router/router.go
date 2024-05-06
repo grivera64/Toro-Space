@@ -39,12 +39,13 @@ func SetupRoutes(app *fiber.App) {
 	app.Get("/auth/google", handler.GoogleAuthHandler)
 	app.Get("/auth/google/callback", handler.GoogleAuthCallbackHandler)
 
+	// Endpoint: /logout
+	app.Get("/logout", handler.LogoutHandler)
+
 	app.Get("/admin", handler.IsAdminHandler)
 	app.Post("/admin/new/user", handler.CreateUserHandler)
 	app.Get("/admin/account/:accountID", handler.GetAccountAdminHandler)
 	app.Post("/admin/new/topic/:topicName", handler.CreateTopicHandler)
-
-	app.Get("/logout", handler.LogoutHandler)
 
 	// app.Use("*", func(c *fiber.Ctx) error {
 	// 	return c.SendStatus(fiber.StatusNotFound)

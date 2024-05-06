@@ -14,11 +14,15 @@ export default function PostsView() {
     const [latestPost, setLatestPost] = React.useState(null);
     const [searchQuery, setSearchQuery] = React.useState('');
 
+    const [refreshNeeded, startRefresh] = React.useState(null);
+
     const [endpoint, setEndpoint] = React.useState('/posts?pageSize=10')
     React.useEffect(() => {
         async function fetchData() {
             try {
-                const response = await fetch(`http://localhost:3030${endpoint}&search_query=${searchQuery}`);
+                const response = await fetch(`http://localhost:3030${endpoint}&search_query=${searchQuery}`, {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 console.log(data);
                 setPosts(data['posts']);
@@ -32,7 +36,7 @@ export default function PostsView() {
             }
         }
         fetchData();
-    }, [latestPost, searchQuery, endpoint]);
+    }, [latestPost, searchQuery, endpoint, refreshNeeded]);
     const [newPostContent, setNewPostContent] = React.useState('');
 
     const handlePostClick = async () => {
@@ -42,16 +46,12 @@ export default function PostsView() {
 
         const nonHashtagMessage = newPostContent.replace(/#[a-zA-Z0-9]+/g, '');
         const hashtags = [...new Set(newPostContent.match(/#[a-zA-Z0-9]+/g) || [])];
-        console.log(nonHashtagMessage);
-        console.log(hashtags);
-
         const response = await fetch(`http://localhost:3030/account/self/user/${user.id}/post`, {
             method: 'POST',
             credentials: 'include',
             headers: {
                 'Content-Type': 'application/json'
             },
-            // body: JSON.stringify({ content: newPostContent })
             // Remove the hashtags from the content and send them as topics
             body: JSON.stringify({ content: nonHashtagMessage, topics: hashtags.map(tag => tag.substring(1))})
         });
@@ -87,7 +87,8 @@ export default function PostsView() {
                         onChange={(e) => setNewPostContent(e.target.value)}
                     ></textarea>
                     <button
-                        className="ml-2 px-4 py-2 bg-blue-500 hover:bg-[#1b62d6] text-white rounded-md transition-colors duration-300"
+                        className="ml-2 px-4 py-2 bg-blue-500
+                            hover:bg-[#1b62d6] text-white rounded-md transition-colors duration-300"
                         onClick={handlePostClick}
                     >
                         Post
@@ -111,21 +112,28 @@ export default function PostsView() {
                         // isLiked={post.liked_by.map(obj => obj.id).some(id => id === user.id)} // Check if current user ID is in the likedBy list
                         postData={post}
                         showLink={true}
+                        startRefresh={startRefresh}
                     />
                 ))}
             </Posts>
             <div className="flex justify-center mt-4 gap-2">
                 <button
-                    className="px-4 py-2 bg-[#860038] hover:bg-[#680018] disabled:bg-gray-500 disabled:hover:cursor-not-allowed text-white rounded-md transition-colors duration-300"
+                    className="px-4 py-2 bg-[#860038] 
+                        hover:bg-[#680018]
+                        disabled:bg-gray-500 disabled:hover:cursor-not-allowed
+                        text-white rounded-md transition-colors duration-300"
                     onClick={() => setEndpoint(`/posts?pageSize=10&after=${posts[0].id}`)}
                     disabled={!hasPrevPage}
                 >
                     Previous Page
                 </button>
                 <button
-                className="px-4 py-2 bg-[#860038] hover:bg-[#680018] disabled:bg-gray-500 disabled:hover:cursor-not-allowed text-white rounded-md transition-colors duration-300"
+                    className="px-4 py-2 bg-[#860038]
+                        hover:bg-[#680018]
+                        disabled:bg-gray-500 disabled:hover:cursor-not-allowed
+                        text-white rounded-md transition-colors duration-300"
                     onClick={() => setEndpoint(`/posts?pageSize=10&before=${posts[posts.length - 1].id}`)}
-                    disabled={!hasNextPage} // Disable the button if there is no previous page
+                    disabled={!hasNextPage}
                 >
                     Next Page
                 </button>

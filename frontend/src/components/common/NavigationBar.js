@@ -20,6 +20,15 @@ const navItems = [
 
 export default function NavigationBar() {
     const {user, loggedIn} = useContext(UserContext);
+
+    const handleSignIn = () => {
+        window.location.href = 'http://localhost:3030/auth/google';
+    };
+
+    const handleSignOut = () => {
+        window.location.href = 'http://localhost:3030/logout';
+    };
+
     return (
         <nav className='navigation-bar bg-[#860038] flex justify-between pr-20 pl-20 py-2'>
             <h1 className='text-3xl font-bold text-white'>Toro Space</h1>
@@ -40,10 +49,9 @@ export default function NavigationBar() {
                 {
                     (!loggedIn) &&
                     <button
-                    className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
-                    onClick={() => {
-                        window.location.href = 'http://localhost:3030/auth/google';
-                    }}
+                        className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full 
+                            hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
+                        onClick={handleSignIn}
                     >
                         Sign In
                     </button>
@@ -51,10 +59,9 @@ export default function NavigationBar() {
                 {
                     (loggedIn) &&
                     <button
-                    className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
-                    onClick={() => {
-                        window.location.href = 'http://localhost:3030/logout';
-                    }}
+                        className='bg-[#E6BC46] text-white text-lg font-bold py-2 px-4 rounded-full
+                            hover:bg-[#C69C26] hover:text-gray transition duration-300 ease-in-out'
+                        onClick={handleSignOut}
                     >
                         Sign Out
                     </button>
