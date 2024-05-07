@@ -40,3 +40,6 @@ go.work
 
 # Ignore OS generated files
 .DS_*
+
+# Python files
+/**/*/__pycache__/

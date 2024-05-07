@@ -59,7 +59,11 @@ export default function PostsView() {
 
         if (response.status !== 200) {
             console.error('Failed to create post');
-            setErr('Spam Message detected, Not Acceptable');
+            if (response.status === 406) {
+                setErr('Spam Message detected, Not Acceptable');
+            } else {
+                setErr('Unable to create post. Please try again later.')
+            }
             setNewPostContent('')
             return;
         }
