@@ -1,12 +1,17 @@
 package handler
 
 import (
+	"context"
 	"log"
 	"strings"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/gofiber/fiber/v2"
 	"torospace.csudh.edu/api/entity"
+	pb "torospace.csudh.edu/api/proto/spam_detector"
 	"torospace.csudh.edu/api/sqlite"
 	"torospace.csudh.edu/api/util"
 )
@@ -374,9 +379,25 @@ func CreatePostHandler(c *fiber.Ctx) error {
 		log.Printf("Failed to get content from request body in CreatePostHandler: %v is %T", reqBody["content"], reqBody["content"])
 		return c.SendStatus(fiber.StatusBadRequest)
 	}
+	postContent = strings.TrimSpace(postContent)
+
+	conn, err := grpc.NewClient("127.0.0.1:3060", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err == nil {
+		client := pb.NewSpamDetectorClient(conn)
+		detectorResp, err := client.Scan(context.Background(), &pb.ScanRequest{Content: postContent})
+		log.Printf("Detector says: %s", detectorResp.Result.String())
+		if err == nil {
+			if detectorResp.Result == pb.ScanResponse_SPAM {
+				return c.SendStatus(fiber.StatusNotAcceptable)
+			}
+		}
+		conn.Close()
+	} else {
+		log.Printf("Failed to connect to grpc: %v", err)
+	}
 
 	post := &entity.Post{
-		Content: strings.TrimSpace(postContent),
+		Content: postContent,
 		Author:  user,
 	}
 

@@ -9,6 +9,7 @@ export default function PostsView() {
     const [posts, setPosts] = React.useState(null);
     const [hasNextPage, setHasNextPage] = React.useState(false);
     const [hasPrevPage, setHasPrevPage] = React.useState(false);
+    const [err, setErr] = React.useState(null);
 
     const {user} = React.useContext(UserContext);
     const [latestPost, setLatestPost] = React.useState(null);
@@ -58,11 +59,14 @@ export default function PostsView() {
 
         if (response.status !== 200) {
             console.error('Failed to create post');
+            setErr('Spam Message detected, Not Acceptable');
+            setNewPostContent('')
             return;
         }
         const data = await response.json();
         setLatestPost(data);
         setNewPostContent('');
+        setErr(null);
     };
 
     if (posts == null || user == null) {
@@ -77,6 +81,11 @@ export default function PostsView() {
     return (
         <div className='p-10'>
             <FilterSearch setSearchQuery={setSearchQuery} />
+            {err && 
+                <div className='text-red-500 text-center'>
+                    <p>{err}</p>
+                </div>
+            }
             {
                 user.role === 'organization' &&
                 <div className="flex justify-center items-center m-20">
@@ -96,20 +105,9 @@ export default function PostsView() {
                 </div>
             }
             <Posts>
-                {/* <Post username={'IEEE_CC'} topics={["Computer_Science"]} date={Date.now()} content={<p>Come join our club: <a className='underline' href='https://torolink.csudh.edu/organization/ieee'>https://torolink.csudh.edu/organization/ieee</a></p>} />
-                <Post username={'Google_Toros'} topics={["Computer_Science", "Careers"]} content={<p>Wish we were a club? Make it a reality and become President of our club!</p>} />
-                <Post username={'Dr_Izaddoost_Club'} topics={["Careers"]} content={<p>Good luck on your presentations!</p>} /> */}
                 {posts && posts.map(post => (
                     <Post
                         key={post.id}
-                        // postID={post.id}
-                        // displayName={post.author['display_name']}
-                        // avatar={post.author['avatar_url']}
-                        // topics={post.topics}
-                        // date={post['created_at']}
-                        // likes={post.likes}
-                        // content={post.content}
-                        // isLiked={post.liked_by.map(obj => obj.id).some(id => id === user.id)} // Check if current user ID is in the likedBy list
                         postData={post}
                         showLink={true}
                         startRefresh={startRefresh}

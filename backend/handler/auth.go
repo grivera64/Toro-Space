@@ -29,8 +29,6 @@ func GoogleAuthHandler(c *fiber.Ctx) error {
 
 	_, ok := session.Get("accountID").(uint)
 	if ok {
-		// Redirect to the login page (or wherever you want to send the user after they log out)
-		// return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", accountID))
 		return c.Redirect("http://localhost:3000/select")
 	}
 
@@ -95,7 +93,6 @@ func GoogleAuthCallbackHandler(c *fiber.Ctx) error {
 	}
 
 	// Redirect to the login page (or wherever you want to send the user after they log out)
-	// return c.Redirect(fmt.Sprintf("http://localhost:3030/account/%d", account.ID))
 	return c.Redirect("http://localhost:3000/select")
 }
 
@@ -196,7 +193,6 @@ func LogoutHandler(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
 
-	// Redirect to the login page (or wherever you want to send the user after they log out)
-	// return c.Redirect("http://localhost:3030/")
+	// Redirect to the login page
 	return c.Redirect("http://localhost:3000")
 }

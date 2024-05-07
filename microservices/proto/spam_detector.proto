@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package spam_detector;
+
+option go_package = "torospace.csudh.edu/api/proto/spam_detector";
+
+service SpamDetector {
+    // Scan - Scans a post's content to verify if is ham or spam
+    rpc Scan(ScanRequest) returns (ScanResponse) {}
+}
+
+message ScanRequest {
+    string content = 1;
+}
+
+message ScanResponse {
+    enum Result {
+        UNKNOWN = 0;
+        HAM = 1;
+        SPAM = 2;
+    }
+
+    Result result = 1;
+}
