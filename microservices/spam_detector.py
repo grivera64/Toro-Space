@@ -15,7 +15,7 @@ from grpc_reflection.v1alpha import reflection
 
 
 class SpamDetectorServicer(spam_detector_pb2_grpc.SpamDetectorServicer):
-    THRESHOLD = 0.90
+    THRESHOLD = 0.8961
 
     def __init__(self, model_path):
         self.logger = logging.getLogger('SpamDetectorServicer')
@@ -69,6 +69,7 @@ class SpamDetectorServicer(spam_detector_pb2_grpc.SpamDetectorServicer):
             self.logger.error(f'Scan failed: {e}')
             return spam_detector_pb2.ScanResponse(result=spam_detector_pb2.ScanResponse.Result.UNKNOWN)
 
+        print(f'isSpam confidence (treshold={SpamDetectorServicer.THRESHOLD}): {prediction}')
         if prediction < SpamDetectorServicer.THRESHOLD:
             result: spam_detector_pb2.ScanResponse.Result = spam_detector_pb2.ScanResponse.Result.HAM
         else:
