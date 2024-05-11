@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -9,9 +10,36 @@ import (
 	"torospace.csudh.edu/api/handler"
 )
 
+var (
+	limitedCtx    = map[string]context.Context{}
+	limitedCancel = map[string]context.CancelFunc{}
+)
+
 func SetupRoutes(app *fiber.App) {
 	app.Use(limiter.New(limiter.Config{
+		Max:        3000,
 		Expiration: 1 * time.Hour,
+		Next: func(c *fiber.Ctx) bool {
+			if ctx, ok := limitedCtx[c.IP()]; ok {
+				select {
+				case <-ctx.Done():
+					limitedCancel[c.IP()]()
+					delete(limitedCancel, c.IP())
+					delete(limitedCtx, c.IP())
+					return true
+				default:
+					return false
+				}
+			}
+			return false
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			if _, ok := limitedCtx[c.IP()]; ok {
+				return c.SendStatus(fiber.StatusTooManyRequests)
+			}
+			limitedCtx[c.IP()], limitedCancel[c.IP()] = context.WithTimeout(context.Background(), 1*time.Hour)
+			return c.SendStatus(fiber.StatusTooManyRequests)
+		},
 	}))
 
 	// Endpoint: /
