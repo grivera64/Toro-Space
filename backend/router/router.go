@@ -1,12 +1,19 @@
 package router
 
 import (
+	"time"
+
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/limiter"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"torospace.csudh.edu/api/handler"
 )
 
 func SetupRoutes(app *fiber.App) {
+	app.Use(limiter.New(limiter.Config{
+		Expiration: 1 * time.Hour,
+	}))
+
 	// Endpoint: /
 	app.Get("/", handler.HelloHandler)
 	app.Get("/monitor", monitor.New(monitor.Config{
