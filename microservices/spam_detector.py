@@ -19,11 +19,11 @@ def main():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     spam_detector_pb2_grpc.add_SpamDetectorServicer_to_server(servicer, server)
     reflection.enable_server_reflection(SERVICE_NAMES, server)
-    server.add_insecure_port('127.0.0.1:3060')
+    server.add_insecure_port('0.0.0.0:3060')
 
     # Start server
     server.start()
-    print('Server started at "127.0.0.1:3060"')
+    print('Server started at "0.0.0.0:3060"')
     server.wait_for_termination()
     pass
 
