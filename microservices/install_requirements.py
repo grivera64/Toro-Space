@@ -28,7 +28,7 @@ def main():
     ]
     
     install(_all_)
-    if sys.platform == 'windows':
+    if sys.platform == 'win32':
         install(windows)
     elif sys.platform.startswith('linux'):
         install(linux)
