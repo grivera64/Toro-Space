@@ -4,7 +4,7 @@ go 1.22.1
 toolchain go1.24.1
 
 require (
-	github.com/gofiber/fiber/v2 v2.52.4
+	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/joho/godotenv v1.5.1
 	golang.org/x/oauth2 v0.18.0
 	google.golang.org/grpc v1.63.2
